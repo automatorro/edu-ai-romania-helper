@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SocialAuthButtons from '@/components/SocialAuthButtons';
 import { useAuth, User } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -71,7 +72,20 @@ const Register = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <SocialAuthButtons />
+
+              <div className="relative mt-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-muted-foreground">
+                    Sau cu email
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4 mt-6">
                 <div>
                   <Label htmlFor="name">Nume complet</Label>
                   <Input

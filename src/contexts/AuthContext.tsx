@@ -10,11 +10,16 @@ export interface User {
   subscription: 'gratuit' | 'premium';
   materialsCount: number;
   materialsLimit: number;
+  avatar?: string;
+  provider?: 'email' | 'google' | 'facebook' | 'github';
 }
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  loginWithFacebook: () => Promise<void>;
+  loginWithGithub: () => Promise<void>;
   register: (email: string, password: string, name: string, userType: User['userType']) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
@@ -35,14 +40,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Simulare autentificare - în aplicația reală va fi înlocuită cu Supabase
+  // Simulare autentificare cu email/parolă
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulare delay API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Mock user data
       const mockUser: User = {
         id: '1',
         email,
@@ -50,7 +53,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userType: 'profesor',
         subscription: 'gratuit',
         materialsCount: 2,
-        materialsLimit: 5
+        materialsLimit: 5,
+        provider: 'email'
       };
       
       setUser(mockUser);
@@ -70,6 +74,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
+  // Simulare autentificare cu Google
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const mockUser: User = {
+        id: 'google_' + Math.random().toString(36).substr(2, 9),
+        email: 'utilizator@gmail.com',
+        name: 'Utilizator Google',
+        userType: 'profesor',
+        subscription: 'gratuit',
+        materialsCount: 0,
+        materialsLimit: 5,
+        avatar: 'https://via.placeholder.com/40',
+        provider: 'google'
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
+      
+      toast({
+        title: "Autentificare reușită!",
+        description: "Conectat cu Google!",
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu am putut conecta cu Google.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  };
+
+  // Simulare autentificare cu Facebook
+  const loginWithFacebook = async () => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const mockUser: User = {
+        id: 'facebook_' + Math.random().toString(36).substr(2, 9),
+        email: 'utilizator@facebook.com',
+        name: 'Utilizator Facebook',
+        userType: 'elev',
+        subscription: 'gratuit',
+        materialsCount: 0,
+        materialsLimit: 5,
+        avatar: 'https://via.placeholder.com/40',
+        provider: 'facebook'
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
+      
+      toast({
+        title: "Autentificare reușită!",
+        description: "Conectat cu Facebook!",
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu am putut conecta cu Facebook.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  };
+
+  // Simulare autentificare cu GitHub
+  const loginWithGithub = async () => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const mockUser: User = {
+        id: 'github_' + Math.random().toString(36).substr(2, 9),
+        email: 'utilizator@github.com',
+        name: 'Utilizator GitHub',
+        userType: 'profesor',
+        subscription: 'gratuit',
+        materialsCount: 0,
+        materialsLimit: 5,
+        avatar: 'https://via.placeholder.com/40',
+        provider: 'github'
+      };
+      
+      setUser(mockUser);
+      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
+      
+      toast({
+        title: "Autentificare reușită!",
+        description: "Conectat cu GitHub!",
+      });
+    } catch (error) {
+      toast({
+        title: "Eroare",
+        description: "Nu am putut conecta cu GitHub.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
+  };
+
   const register = async (email: string, password: string, name: string, userType: User['userType']) => {
     setIsLoading(true);
     try {
@@ -82,7 +191,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userType,
         subscription: 'gratuit',
         materialsCount: 0,
-        materialsLimit: 5
+        materialsLimit: 5,
+        provider: 'email'
       };
       
       setUser(newUser);
@@ -119,7 +229,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      loginWithGoogle,
+      loginWithFacebook,
+      loginWithGithub,
+      register, 
+      logout, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
