@@ -2,9 +2,38 @@
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 const SocialAuthButtons = () => {
-  const { loginWithGoogle, loginWithFacebook, loginWithGithub, isLoading } = useAuth();
+  const { loginWithGoogle, loginWithFacebook, loginWithGithub } = useAuth();
+  const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
+
+  const handleGoogleLogin = async () => {
+    setLoadingProvider('google');
+    try {
+      await loginWithGoogle();
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setLoadingProvider('facebook');
+    try {
+      await loginWithFacebook();
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setLoadingProvider('github');
+    try {
+      await loginWithGithub();
+    } finally {
+      setLoadingProvider(null);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -22,11 +51,11 @@ const SocialAuthButtons = () => {
       <div className="grid grid-cols-1 gap-3">
         <Button
           variant="outline"
-          onClick={loginWithGoogle}
-          disabled={isLoading}
+          onClick={handleGoogleLogin}
+          disabled={loadingProvider !== null}
           className="w-full"
         >
-          {isLoading ? (
+          {loadingProvider === 'google' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -53,11 +82,11 @@ const SocialAuthButtons = () => {
 
         <Button
           variant="outline"
-          onClick={loginWithFacebook}
-          disabled={isLoading}
+          onClick={handleFacebookLogin}
+          disabled={loadingProvider !== null}
           className="w-full"
         >
-          {isLoading ? (
+          {loadingProvider === 'facebook' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
@@ -69,11 +98,11 @@ const SocialAuthButtons = () => {
 
         <Button
           variant="outline"
-          onClick={loginWithGithub}
-          disabled={isLoading}
+          onClick={handleGithubLogin}
+          disabled={loadingProvider !== null}
           className="w-full"
         >
-          {isLoading ? (
+          {loadingProvider === 'github' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">

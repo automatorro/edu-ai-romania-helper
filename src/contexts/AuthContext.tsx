@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -125,7 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogle = async () => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -142,12 +140,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: authError.message || "Nu am putut conecta cu Google.",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
 
   const loginWithFacebook = async () => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
@@ -164,12 +160,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: authError.message || "Nu am putut conecta cu Facebook.",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
 
   const loginWithGithub = async () => {
-    setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
@@ -186,7 +180,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: authError.message || "Nu am putut conecta cu GitHub.",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
 
