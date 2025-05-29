@@ -13,7 +13,7 @@ export interface User {
   materialsCount: number;
   materialsLimit: number;
   avatar?: string;
-  provider?: 'email' | 'google' | 'facebook' | 'github';
+  provider?: string;
 }
 
 interface AuthContextType {
