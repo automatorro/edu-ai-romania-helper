@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import type { User as SupabaseUser, AuthError } from '@supabase/supabase-js';
 
 export interface User {
   id: string;
@@ -21,7 +23,7 @@ interface AuthContextType {
   loginWithFacebook: () => Promise<void>;
   loginWithGithub: () => Promise<void>;
   register: (email: string, password: string, name: string, userType: User['userType']) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -37,196 +39,213 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Simulare autentificare cu email/parolă
+  // Convert Supabase user to our User interface
+  const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: profile.name,
+        userType: profile.user_type,
+        subscription: profile.subscription,
+        materialsCount: profile.materials_count,
+        materialsLimit: profile.materials_limit,
+        avatar: profile.avatar_url,
+        provider: profile.provider
+      };
+    } catch (error) {
+      console.error('Error converting user:', error);
+      return null;
+    }
+  };
+
+  // Handle authentication state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (session?.user) {
+        const convertedUser = await convertSupabaseUser(session.user);
+        setUser(convertedUser);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const convertedUser = await convertSupabaseUser(session.user);
+        setUser(convertedUser);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser: User = {
-        id: '1',
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        name: email.split('@')[0],
-        userType: 'profesor',
-        subscription: 'gratuit',
-        materialsCount: 2,
-        materialsLimit: 5,
-        provider: 'email'
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
-      
+        password,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Autentificare reușită!",
         description: "Bine ai venit în EduAI!",
       });
     } catch (error) {
+      const authError = error as AuthError;
       toast({
         title: "Eroare",
-        description: "Email sau parolă incorectă.",
+        description: authError.message || "Email sau parolă incorectă.",
         variant: "destructive",
       });
     }
     setIsLoading(false);
   };
 
-  // Simulare autentificare cu Google
   const loginWithGoogle = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: 'google_' + Math.random().toString(36).substr(2, 9),
-        email: 'utilizator@gmail.com',
-        name: 'Utilizator Google',
-        userType: 'profesor',
-        subscription: 'gratuit',
-        materialsCount: 0,
-        materialsLimit: 5,
-        avatar: 'https://via.placeholder.com/40',
-        provider: 'google'
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
-      
-      toast({
-        title: "Autentificare reușită!",
-        description: "Conectat cu Google!",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
+
+      if (error) throw error;
     } catch (error) {
+      const authError = error as AuthError;
       toast({
         title: "Eroare",
-        description: "Nu am putut conecta cu Google.",
+        description: authError.message || "Nu am putut conecta cu Google.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  // Simulare autentificare cu Facebook
   const loginWithFacebook = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: 'facebook_' + Math.random().toString(36).substr(2, 9),
-        email: 'utilizator@facebook.com',
-        name: 'Utilizator Facebook',
-        userType: 'elev',
-        subscription: 'gratuit',
-        materialsCount: 0,
-        materialsLimit: 5,
-        avatar: 'https://via.placeholder.com/40',
-        provider: 'facebook'
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
-      
-      toast({
-        title: "Autentificare reușită!",
-        description: "Conectat cu Facebook!",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
+
+      if (error) throw error;
     } catch (error) {
+      const authError = error as AuthError;
       toast({
         title: "Eroare",
-        description: "Nu am putut conecta cu Facebook.",
+        description: authError.message || "Nu am putut conecta cu Facebook.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  // Simulare autentificare cu GitHub
   const loginWithGithub = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockUser: User = {
-        id: 'github_' + Math.random().toString(36).substr(2, 9),
-        email: 'utilizator@github.com',
-        name: 'Utilizator GitHub',
-        userType: 'profesor',
-        subscription: 'gratuit',
-        materialsCount: 0,
-        materialsLimit: 5,
-        avatar: 'https://via.placeholder.com/40',
-        provider: 'github'
-      };
-      
-      setUser(mockUser);
-      localStorage.setItem('eduai_user', JSON.stringify(mockUser));
-      
-      toast({
-        title: "Autentificare reușită!",
-        description: "Conectat cu GitHub!",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
+
+      if (error) throw error;
     } catch (error) {
+      const authError = error as AuthError;
       toast({
         title: "Eroare",
-        description: "Nu am putut conecta cu GitHub.",
+        description: authError.message || "Nu am putut conecta cu GitHub.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const register = async (email: string, password: string, name: string, userType: User['userType']) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name,
-        userType,
-        subscription: 'gratuit',
-        materialsCount: 0,
-        materialsLimit: 5,
-        provider: 'email'
-      };
-      
-      setUser(newUser);
-      localStorage.setItem('eduai_user', JSON.stringify(newUser));
-      
-      toast({
-        title: "Cont creat cu succes!",
-        description: "Bine ai venit în EduAI!",
+        password,
+        options: {
+          data: {
+            full_name: name,
+            user_type: userType
+          }
+        }
       });
+
+      if (error) throw error;
+
+      if (data.user && !data.user.email_confirmed_at) {
+        toast({
+          title: "Verifică email-ul!",
+          description: "Am trimis un link de confirmare la adresa ta de email.",
+        });
+      } else {
+        toast({
+          title: "Cont creat cu succes!",
+          description: "Bine ai venit în EduAI!",
+        });
+      }
     } catch (error) {
+      const authError = error as AuthError;
       toast({
         title: "Eroare",
-        description: "Nu am putut crea contul. Încearcă din nou.",
+        description: authError.message || "Nu am putut crea contul. Încearcă din nou.",
         variant: "destructive",
       });
     }
     setIsLoading(false);
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('eduai_user');
-    toast({
-      title: "Delogare reușită",
-      description: "La revedere!",
-    });
-  };
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('eduai_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Delogare reușită",
+        description: "La revedere!",
+      });
+    } catch (error) {
+      const authError = error as AuthError;
+      toast({
+        title: "Eroare",
+        description: authError.message || "Eroare la delogare.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  };
 
   return (
     <AuthContext.Provider value={{ 

@@ -9,7 +9,151 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      materials: {
+        Row: {
+          content: Json
+          created_at: string
+          difficulty: string | null
+          grade_level: string | null
+          id: string
+          material_type: Database["public"]["Enums"]["material_type"]
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          difficulty?: string | null
+          grade_level?: string | null
+          id?: string
+          material_type: Database["public"]["Enums"]["material_type"]
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          difficulty?: string | null
+          grade_level?: string | null
+          id?: string
+          material_type?: Database["public"]["Enums"]["material_type"]
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          materials_count: number
+          materials_limit: number
+          name: string
+          provider: string | null
+          subscription: Database["public"]["Enums"]["subscription_type"]
+          updated_at: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          materials_count?: number
+          materials_limit?: number
+          name: string
+          provider?: string | null
+          subscription?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          materials_count?: number
+          materials_limit?: number
+          name?: string
+          provider?: string | null
+          subscription?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
+      rls: {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +162,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      material_type:
+        | "quiz"
+        | "plan_lectie"
+        | "prezentare"
+        | "analogie"
+        | "evaluare"
+      subscription_type: "gratuit" | "premium"
+      user_type: "profesor" | "elev" | "parinte"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +284,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      material_type: [
+        "quiz",
+        "plan_lectie",
+        "prezentare",
+        "analogie",
+        "evaluare",
+      ],
+      subscription_type: ["gratuit", "premium"],
+      user_type: ["profesor", "elev", "parinte"],
+    },
   },
 } as const
