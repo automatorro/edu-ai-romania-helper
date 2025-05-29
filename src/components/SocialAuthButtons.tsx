@@ -9,27 +9,39 @@ const SocialAuthButtons = () => {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
+    console.log('Starting Google login...');
     setLoadingProvider('google');
     try {
       await loginWithGoogle();
+      console.log('Google login completed');
+    } catch (error) {
+      console.error('Google login error:', error);
     } finally {
       setLoadingProvider(null);
     }
   };
 
   const handleFacebookLogin = async () => {
+    console.log('Starting Facebook login...');
     setLoadingProvider('facebook');
     try {
       await loginWithFacebook();
+      console.log('Facebook login completed');
+    } catch (error) {
+      console.error('Facebook login error:', error);
     } finally {
       setLoadingProvider(null);
     }
   };
 
   const handleGithubLogin = async () => {
+    console.log('Starting GitHub login...');
     setLoadingProvider('github');
     try {
       await loginWithGithub();
+      console.log('GitHub login completed');
+    } catch (error) {
+      console.error('GitHub login error:', error);
     } finally {
       setLoadingProvider(null);
     }
@@ -54,6 +66,7 @@ const SocialAuthButtons = () => {
           onClick={handleGoogleLogin}
           disabled={loadingProvider !== null}
           className="w-full"
+          type="button"
         >
           {loadingProvider === 'google' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -85,6 +98,7 @@ const SocialAuthButtons = () => {
           onClick={handleFacebookLogin}
           disabled={loadingProvider !== null}
           className="w-full"
+          type="button"
         >
           {loadingProvider === 'facebook' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -101,6 +115,7 @@ const SocialAuthButtons = () => {
           onClick={handleGithubLogin}
           disabled={loadingProvider !== null}
           className="w-full"
+          type="button"
         >
           {loadingProvider === 'github' ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
