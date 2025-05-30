@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,15 +16,24 @@ const Login = () => {
     email: '',
     password: ''
   });
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      console.log('User is logged in, redirecting to dashboard...');
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(formData.email, formData.password);
-      navigate('/dashboard');
+      // Navigation will be handled by the useEffect above
     } catch (error) {
+      console.error('Login submission error:', error);
       // Error handling este în AuthContext
     }
   };
@@ -35,6 +44,18 @@ const Login = () => {
       [e.target.name]: e.target.value
     }));
   };
+
+  // Show loading if authentication is in progress
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Se încarcă...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
