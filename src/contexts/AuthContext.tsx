@@ -44,20 +44,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Helper function to get current origin for redirects
-  const getCurrentOrigin = () => {
-    if (typeof window !== 'undefined') {
-      return window.location.origin;
-    }
-    return '';
-  };
-
   // Convert Supabase user to our User interface
   const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<User | null> => {
     try {
-      console.log('Converting Supabase user:', supabaseUser.email);
+      console.log('Converting Supabase user:', supabaseUser);
       
-      // First check if profile exists
+      // Check if profile exists
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -69,33 +61,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      // If no profile exists, it will be created by the database trigger
-      // Let's wait a moment and try again
+      // If no profile exists, create one
       if (!profile) {
-        console.log('Profile not found, waiting for creation...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Profile not found, creating new profile...');
         
-        const { data: retryProfile, error: retryError } = await supabase
+        const provider = supabaseUser.app_metadata?.provider || 'email';
+        const fullName = supabaseUser.user_metadata?.full_name || 
+                        supabaseUser.user_metadata?.name || 
+                        supabaseUser.email?.split('@')[0] || 
+                        'User';
+
+        const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('id', supabaseUser.id)
+          .insert({
+            id: supabaseUser.id,
+            name: fullName,
+            user_type: 'profesor',
+            provider: provider,
+            avatar_url: supabaseUser.user_metadata?.avatar_url
+          })
+          .select()
           .single();
 
-        if (retryError) {
-          console.error('Error fetching profile on retry:', retryError);
+        if (createError) {
+          console.error('Error creating profile:', createError);
           return null;
         }
 
         return {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
-          name: retryProfile.name,
-          userType: retryProfile.user_type,
-          subscription: retryProfile.subscription,
-          materialsCount: retryProfile.materials_count,
-          materialsLimit: retryProfile.materials_limit,
-          avatar: retryProfile.avatar_url,
-          provider: retryProfile.provider
+          name: newProfile.name,
+          userType: newProfile.user_type,
+          subscription: newProfile.subscription,
+          materialsCount: newProfile.materials_count,
+          materialsLimit: newProfile.materials_limit,
+          avatar: newProfile.avatar_url,
+          provider: newProfile.provider
         };
       }
 
@@ -121,23 +123,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Setting up auth state listener...');
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('Auth state changed:', event, 'User:', session?.user?.email);
       
       setSession(session);
       
       if (session?.user) {
         // Use setTimeout to prevent potential deadlocks
         setTimeout(async () => {
-          const convertedUser = await convertSupabaseUser(session.user);
-          setUser(convertedUser);
-          setIsLoading(false);
-          
-          // Show success toast for sign in events
-          if (event === 'SIGNED_IN') {
-            toast({
-              title: "Autentificare reușită!",
-              description: "Bine ai venit în EduAI!",
-            });
+          try {
+            const convertedUser = await convertSupabaseUser(session.user);
+            setUser(convertedUser);
+            setIsLoading(false);
+            
+            // Show success toast for sign in events
+            if (event === 'SIGNED_IN') {
+              toast({
+                title: "Autentificare reușită!",
+                description: "Bine ai venit în EduAI!",
+              });
+            }
+          } catch (error) {
+            console.error('Error processing auth state change:', error);
+            setIsLoading(false);
           }
         }, 0);
       } else {
@@ -152,8 +159,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       
       if (session?.user) {
-        const convertedUser = await convertSupabaseUser(session.user);
-        setUser(convertedUser);
+        try {
+          const convertedUser = await convertSupabaseUser(session.user);
+          setUser(convertedUser);
+        } catch (error) {
+          console.error('Error processing initial session:', error);
+        }
       }
       setIsLoading(false);
     });
@@ -178,12 +189,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const authError = error as AuthError;
       console.error('Login error:', authError);
       toast({
-        title: "Eroare",
+        title: "Eroare la autentificare",
         description: authError.message || "Email sau parolă incorectă.",
         variant: "destructive",
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const loginWithGoogle = async () => {
@@ -192,11 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${getCurrentOrigin()}/dashboard`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
 
@@ -219,8 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-          redirectTo: `${getCurrentOrigin()}/dashboard`,
-          scopes: 'email',
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
 
@@ -243,8 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${getCurrentOrigin()}/dashboard`,
-          scopes: 'user:email',
+          redirectTo: `${window.location.origin}/dashboard`
         }
       });
 

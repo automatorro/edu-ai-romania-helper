@@ -67,6 +67,7 @@ export type Database = {
           provider: string | null
           subscription: Database["public"]["Enums"]["subscription_type"]
           updated_at: string
+          user_IS: string | null
           user_type: Database["public"]["Enums"]["user_type"]
         }
         Insert: {
@@ -79,6 +80,7 @@ export type Database = {
           provider?: string | null
           subscription?: Database["public"]["Enums"]["subscription_type"]
           updated_at?: string
+          user_IS?: string | null
           user_type: Database["public"]["Enums"]["user_type"]
         }
         Update: {
@@ -91,6 +93,7 @@ export type Database = {
           provider?: string | null
           subscription?: Database["public"]["Enums"]["subscription_type"]
           updated_at?: string
+          user_IS?: string | null
           user_type?: Database["public"]["Enums"]["user_type"]
         }
         Relationships: []

@@ -14,7 +14,6 @@ const SocialAuthButtons = () => {
     try {
       await loginWithGoogle();
       console.log('Google login initiated - user will be redirected');
-      // Note: Don't reset loading here as user will be redirected
     } catch (error) {
       console.error('Google login error:', error);
       setLoadingProvider(null);
@@ -27,7 +26,6 @@ const SocialAuthButtons = () => {
     try {
       await loginWithFacebook();
       console.log('Facebook login initiated - user will be redirected');
-      // Note: Don't reset loading here as user will be redirected
     } catch (error) {
       console.error('Facebook login error:', error);
       setLoadingProvider(null);
@@ -40,7 +38,6 @@ const SocialAuthButtons = () => {
     try {
       await loginWithGithub();
       console.log('GitHub login initiated - user will be redirected');
-      // Note: Don't reset loading here as user will be redirected
     } catch (error) {
       console.error('GitHub login error:', error);
       setLoadingProvider(null);
@@ -49,17 +46,6 @@ const SocialAuthButtons = () => {
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-muted-foreground">
-            Sau continuă cu
-          </span>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 gap-3">
         <Button
           variant="outline"
