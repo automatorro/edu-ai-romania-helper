@@ -122,51 +122,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('Setting up auth state listener...');
     
+    // Get initial session first
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting initial session:', error);
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Initial session:', session?.user?.email);
+        setSession(session);
+        
+        if (session?.user) {
+          console.log('Processing initial session user...');
+          const convertedUser = await convertSupabaseUser(session.user);
+          setUser(convertedUser);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+        setIsLoading(false);
+      }
+    };
+
+    getInitialSession();
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, 'User:', session?.user?.email);
       
       setSession(session);
       
-      if (session?.user) {
-        // Use setTimeout to prevent potential deadlocks
-        setTimeout(async () => {
-          try {
-            const convertedUser = await convertSupabaseUser(session.user);
-            setUser(convertedUser);
-            setIsLoading(false);
-            
-            // Show success toast for sign in events
-            if (event === 'SIGNED_IN') {
-              toast({
-                title: "Autentificare reușită!",
-                description: "Bine ai venit în EduAI!",
-              });
-            }
-          } catch (error) {
-            console.error('Error processing auth state change:', error);
-            setIsLoading(false);
-          }
-        }, 0);
-      } else {
-        setUser(null);
-        setIsLoading(false);
-      }
-    });
-
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setSession(session);
-      
-      if (session?.user) {
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in, processing...');
         try {
           const convertedUser = await convertSupabaseUser(session.user);
           setUser(convertedUser);
+          
+          toast({
+            title: "Autentificare reușită!",
+            description: "Bine ai venit în EduAI!",
+          });
         } catch (error) {
-          console.error('Error processing initial session:', error);
+          console.error('Error processing signed in user:', error);
         }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out');
+        setUser(null);
       }
-      setIsLoading(false);
+      
+      // Only set loading to false after we've processed the session
+      if (!isLoading) {
+        setIsLoading(false);
+      }
     });
 
     return () => {
@@ -203,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: window.location.origin + '/dashboard'
         }
       });
 
@@ -226,7 +236,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: window.location.origin + '/dashboard'
         }
       });
 
@@ -249,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: window.location.origin + '/dashboard'
         }
       });
 
