@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SocialAuthButtons from '@/components/SocialAuthButtons';
-import { useAuth, User } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@/types/auth';
 import { Loader2 } from 'lucide-react';
 
 const Register = () => {

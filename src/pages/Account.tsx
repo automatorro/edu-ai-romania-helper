@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useAuth, User } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Settings, Crown, FileText, Brain, Calendar, Download, Trash2 } from 'lucide-react';
 
