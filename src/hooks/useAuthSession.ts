@@ -49,25 +49,32 @@ export const useAuthSession = () => {
       
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('User signed in, processing...');
+        setIsLoading(true);
         try {
           const convertedUser = await convertSupabaseUser(session.user);
           setUser(convertedUser);
           
-          toast({
-            title: "Autentificare reușită!",
-            description: "Bine ai venit în EduAI!",
-          });
+          if (convertedUser) {
+            toast({
+              title: "Autentificare reușită!",
+              description: "Bine ai venit în EduAI!",
+            });
+          }
         } catch (error) {
           console.error('Error processing signed in user:', error);
+        } finally {
+          setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         setUser(null);
-      }
-      
-      // Only set loading to false after we've processed the session
-      if (!isLoading) {
         setIsLoading(false);
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed, updating user data...');
+        if (session?.user) {
+          const convertedUser = await convertSupabaseUser(session.user);
+          setUser(convertedUser);
+        }
       }
     });
 
@@ -75,7 +82,7 @@ export const useAuthSession = () => {
       console.log('Cleaning up auth subscription...');
       subscription.unsubscribe();
     };
-  }, [toast, isLoading]);
+  }, [toast]);
 
   return { user, session, isLoading, setUser, setIsLoading };
 };

@@ -10,7 +10,7 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', supabaseUser.id)
+      .eq('user_id', supabaseUser.id)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -18,33 +18,40 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       return null;
     }
 
-    // If no profile exists, create one
-    if (!profile) {
-      console.log('Profile not found, creating new profile...');
-      
-      const provider = supabaseUser.app_metadata?.provider || 'email';
-      const fullName = supabaseUser.user_metadata?.full_name || 
-                      supabaseUser.user_metadata?.name || 
-                      supabaseUser.email?.split('@')[0] || 
-                      'User';
+    // If profile exists, return the converted user
+    if (profile) {
+      console.log('Profile found:', profile);
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: profile.name,
+        userType: profile.user_type,
+        subscription: profile.subscription,
+        materialsCount: profile.materials_count,
+        materialsLimit: profile.materials_limit,
+        avatar: profile.avatar_url,
+        provider: profile.provider
+      };
+    }
 
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: supabaseUser.id,
-          name: fullName,
-          user_type: 'profesor',
-          provider: provider,
-          avatar_url: supabaseUser.user_metadata?.avatar_url
-        })
-        .select()
-        .single();
+    // If no profile exists, the trigger should have created one
+    // Wait a moment and try again
+    console.log('Profile not found, waiting for trigger to create it...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const { data: newProfile, error: retryError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', supabaseUser.id)
+      .single();
 
-      if (createError) {
-        console.error('Error creating profile:', createError);
-        return null;
-      }
+    if (retryError) {
+      console.error('Profile still not found after retry:', retryError);
+      return null;
+    }
 
+    if (newProfile) {
+      console.log('Profile found after retry:', newProfile);
       return {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
@@ -58,17 +65,7 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       };
     }
 
-    return {
-      id: supabaseUser.id,
-      email: supabaseUser.email || '',
-      name: profile.name,
-      userType: profile.user_type,
-      subscription: profile.subscription,
-      materialsCount: profile.materials_count,
-      materialsLimit: profile.materials_limit,
-      avatar: profile.avatar_url,
-      provider: profile.provider
-    };
+    return null;
   } catch (error) {
     console.error('Error converting user:', error);
     return null;
