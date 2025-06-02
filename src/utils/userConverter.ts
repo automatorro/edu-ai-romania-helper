@@ -30,7 +30,8 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
         materialsCount: profile.materials_count,
         materialsLimit: profile.materials_limit,
         avatar: profile.avatar_url,
-        provider: profile.provider
+        provider: profile.provider,
+        role: profile.role || 'user'
       };
     }
 
@@ -61,7 +62,8 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
         materialsCount: newProfile.materials_count,
         materialsLimit: newProfile.materials_limit,
         avatar: newProfile.avatar_url,
-        provider: newProfile.provider
+        provider: newProfile.provider,
+        role: newProfile.role || 'user'
       };
     }
 

@@ -11,6 +11,7 @@ export interface User {
   materialsLimit: number;
   avatar?: string;
   provider?: string;
+  role: 'admin' | 'user';
 }
 
 export interface AuthContextType {

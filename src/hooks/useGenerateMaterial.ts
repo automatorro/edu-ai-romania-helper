@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GenerateMaterialRequest {
   materialType: 'quiz' | 'plan_lectie' | 'prezentare' | 'analogie' | 'evaluare';
@@ -14,6 +15,7 @@ interface GenerateMaterialRequest {
 export const useGenerateMaterial = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (request: GenerateMaterialRequest) => {
@@ -21,6 +23,11 @@ export const useGenerateMaterial = () => {
       
       if (!session) {
         throw new Error('Nu ești autentificat');
+      }
+
+      // Check if user is admin or has remaining materials
+      if (user && user.role !== 'admin' && user.materialsCount >= user.materialsLimit) {
+        throw new Error('Ai atins limita de materiale generate. Upgrade la premium pentru mai multe materiale.');
       }
 
       const response = await supabase.functions.invoke('generate-material', {
@@ -37,10 +44,17 @@ export const useGenerateMaterial = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      toast({
-        title: "Material generat cu succes!",
-        description: "Materialul a fost salvat în contul tău.",
-      });
+      if (user?.role === 'admin') {
+        toast({
+          title: "Material generat cu succes! (Admin)",
+          description: "Materialul a fost salvat în contul tău. Ca admin, ai generări nelimitate.",
+        });
+      } else {
+        toast({
+          title: "Material generat cu succes!",
+          description: "Materialul a fost salvat în contul tău.",
+        });
+      }
       
       // Invalidate materials query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['materials'] });
