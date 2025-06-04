@@ -1,13 +1,15 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useUserMaterials = () => {
+  const { user } = useAuth();
+
   return useQuery({
-    queryKey: ['materials'],
+    queryKey: ['materials', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      // Check if user is authenticated
       if (!user) {
         throw new Error('Nu ești autentificat');
       }
@@ -19,11 +21,12 @@ export const useUserMaterials = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        throw error;
+        console.error('Error fetching materials:', error);
+        throw new Error('Eroare la încărcarea materialelor');
       }
 
-      return data;
+      return data || [];
     },
-    enabled: true,
+    enabled: !!user,
   });
 };

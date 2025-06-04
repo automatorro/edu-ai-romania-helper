@@ -16,7 +16,10 @@ export const useAdminOperations = () => {
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      if (!isAdmin) return [];
+      // Double-check admin authorization
+      if (!isAdmin) {
+        throw new Error('Nu ai permisiuni de administrator');
+      }
       
       const { data, error } = await supabase
         .from('profiles')
@@ -32,8 +35,14 @@ export const useAdminOperations = () => {
   // Promote user to admin
   const promoteToAdmin = useMutation({
     mutationFn: async (userId: string) => {
+      // Authorization check
       if (!isAdmin) {
         throw new Error('Doar administratorii pot face această operațiune');
+      }
+
+      // Validate userId
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('ID utilizator invalid');
       }
 
       // Check if user already has admin role
@@ -53,7 +62,12 @@ export const useAdminOperations = () => {
         .from('user_roles')
         .insert({ user_id: userId, role: 'admin' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error promoting user to admin:', error);
+        throw new Error('Eroare la promovarea utilizatorului');
+      }
+
+      return { success: true };
     },
     onSuccess: () => {
       toast({
@@ -63,9 +77,10 @@ export const useAdminOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (error: Error) => {
+      console.error('Promote to admin error:', error);
       toast({
         title: "Eroare",
-        description: error.message,
+        description: error.message || 'Eroare la promovarea utilizatorului',
         variant: "destructive",
       });
     },
@@ -74,8 +89,19 @@ export const useAdminOperations = () => {
   // Remove admin role
   const removeAdminRole = useMutation({
     mutationFn: async (userId: string) => {
+      // Authorization check
       if (!isAdmin) {
         throw new Error('Doar administratorii pot face această operațiune');
+      }
+
+      // Validate userId
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('ID utilizator invalid');
+      }
+
+      // Prevent removing admin role from current user
+      if (userId === user?.id) {
+        throw new Error('Nu îți poți elimina propriul rol de administrator');
       }
 
       const { error } = await supabase
@@ -84,7 +110,12 @@ export const useAdminOperations = () => {
         .eq('user_id', userId)
         .eq('role', 'admin');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing admin role:', error);
+        throw new Error('Eroare la eliminarea rolului de administrator');
+      }
+
+      return { success: true };
     },
     onSuccess: () => {
       toast({
@@ -94,9 +125,10 @@ export const useAdminOperations = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     },
     onError: (error: Error) => {
+      console.error('Remove admin role error:', error);
       toast({
         title: "Eroare",
-        description: error.message,
+        description: error.message || 'Eroare la eliminarea rolului de administrator',
         variant: "destructive",
       });
     },

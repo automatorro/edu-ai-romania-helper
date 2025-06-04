@@ -19,17 +19,34 @@ export const useGenerateMaterial = () => {
 
   return useMutation({
     mutationFn: async (request: GenerateMaterialRequest) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+      // Pre-flight authorization checks
+      if (!user) {
         throw new Error('Nu ești autentificat');
       }
 
-      // Check if user is admin or has remaining materials
-      if (user && user.role !== 'admin' && user.materialsCount >= user.materialsLimit) {
+      // Validate request parameters
+      if (!request.materialType || !request.subject || !request.gradeLevel || !request.difficulty) {
+        throw new Error('Toate câmpurile obligatorii trebuie completate');
+      }
+
+      const validTypes = ['quiz', 'plan_lectie', 'prezentare', 'analogie', 'evaluare'];
+      if (!validTypes.includes(request.materialType)) {
+        throw new Error('Tipul de material nu este valid');
+      }
+
+      // Get current session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        throw new Error('Sesiunea a expirat. Te rugăm să te autentifici din nou.');
+      }
+
+      // Check rate limits for non-admin users
+      if (user.role !== 'admin' && user.materialsCount >= user.materialsLimit) {
         throw new Error('Ai atins limita de materiale generate. Upgrade la premium pentru mai multe materiale.');
       }
 
+      // Call the edge function with proper error handling
       const response = await supabase.functions.invoke('generate-material', {
         body: request,
         headers: {
@@ -38,32 +55,35 @@ export const useGenerateMaterial = () => {
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Edge function error:', response.error);
+        throw new Error(response.error.message || 'Eroare la generarea materialului');
+      }
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Eroare necunoscută la generarea materialului');
       }
 
       return response.data;
     },
     onSuccess: (data) => {
-      if (user?.role === 'admin') {
-        toast({
-          title: "Material generat cu succes! (Admin)",
-          description: "Materialul a fost salvat în contul tău. Ca admin, ai generări nelimitate.",
-        });
-      } else {
-        toast({
-          title: "Material generat cu succes!",
-          description: "Materialul a fost salvat în contul tău.",
-        });
-      }
+      const message = data.message || (user?.role === 'admin' 
+        ? "Material generat cu succes! (Admin - generări nelimitate)" 
+        : "Material generat cu succes!");
       
-      // Invalidate materials query to refresh the list
+      toast({
+        title: "Succes!",
+        description: message,
+      });
+      
+      // Invalidate and refetch queries
       queryClient.invalidateQueries({ queryKey: ['materials'] });
       queryClient.invalidateQueries({ queryKey: ['user-profile'] });
     },
     onError: (error: Error) => {
+      console.error('Generate material error:', error);
       toast({
         title: "Eroare",
-        description: error.message,
+        description: error.message || 'A apărut o eroare la generarea materialului',
         variant: "destructive",
       });
     },
