@@ -16,7 +16,7 @@ export const useUserMaterials = () => {
 
       const { data, error } = await supabase
         .from('materials')
-        .select('*')
+        .select('id, title, material_type, subject, grade_level, difficulty, created_at, download_url')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 

@@ -33,11 +33,10 @@ export const useGenerateMaterial = () => {
       if (!user) {
         console.log('🎯 Generating material with AI without authentication (test mode)');
         
-        // Call the edge function directly with a test session
         const response = await supabase.functions.invoke('generate-material', {
           body: {
             ...request,
-            testMode: true // Flag pentru edge function să știe că e test
+            testMode: true
           }
         });
 
@@ -91,6 +90,31 @@ export const useGenerateMaterial = () => {
 
       if (!response.data?.success) {
         throw new Error(response.data?.error || 'Eroare necunoscută la generarea materialului');
+      }
+
+      // Convert to Office format if material was saved
+      if (response.data.material) {
+        try {
+          const convertResponse = await supabase.functions.invoke('convert-to-office', {
+            body: {
+              content: response.data.material.content.generated_content,
+              materialType: request.materialType,
+              materialId: response.data.material.id
+            },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          if (convertResponse.data?.success) {
+            console.log('Fișierul a fost convertit și salvat cu succes');
+          } else {
+            console.warn('Conversia în format Office a eșuat:', convertResponse.data?.error);
+          }
+        } catch (conversionError) {
+          console.warn('Eroare la conversia în format Office:', conversionError);
+          // Nu oprim procesul pentru că materialul JSON a fost salvat cu succes
+        }
       }
 
       return response.data;

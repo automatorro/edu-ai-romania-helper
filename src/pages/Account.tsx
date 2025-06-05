@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +11,13 @@ import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types/auth';
 import { useToast } from '@/hooks/use-toast';
-import { Settings, Crown, FileText, Brain, Calendar, Download, Trash2 } from 'lucide-react';
+import { useUserMaterials } from '@/hooks/useUserMaterials';
+import { Settings, Crown, FileText, Brain, Calendar, Download, Trash2, ExternalLink } from 'lucide-react';
 
 const Account = () => {
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const { data: materials, isLoading: materialsLoading } = useUserMaterials();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -49,7 +50,6 @@ const Account = () => {
   }
 
   const handleSaveProfile = () => {
-    // Simulare salvare profil
     toast({
       title: "Profil actualizat!",
       description: "Modificările au fost salvate cu succes.",
@@ -67,18 +67,25 @@ const Account = () => {
     }
   };
 
-  // Mock data pentru activitate
+  const getFileExtension = (materialType: string) => {
+    return materialType === 'prezentare' ? 'PPTX' : 'DOCX';
+  };
+
+  const handleDownload = (url: string, title: string, materialType: string) => {
+    const extension = getFileExtension(materialType);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title}.${extension.toLowerCase()}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const recentActivity = [
     { type: 'Quiz generat', subject: 'Matematică clasa a 8-a', date: '2024-01-15', status: 'Salvat' },
     { type: 'Plan lecție', subject: 'Istorie România', date: '2024-01-14', status: 'Descărcat' },
     { type: 'Consultanță AI', subject: 'Pregătire BAC', date: '2024-01-13', status: 'Completat' },
     { type: 'Quiz generat', subject: 'Fizică', date: '2024-01-12', status: 'Salvat' }
-  ];
-
-  const savedMaterials = [
-    { id: '1', title: 'Quiz Teorema lui Pitagora', type: 'Quiz', subject: 'Matematică', date: '2024-01-15', size: '2.3 MB' },
-    { id: '2', title: 'Plan lecție Războaiele balcanice', type: 'Plan lecție', subject: 'Istorie', date: '2024-01-14', size: '1.8 MB' },
-    { id: '3', title: 'Prezentare Sistemul solar', type: 'Prezentare', subject: 'Științe', date: '2024-01-13', size: '4.1 MB' }
   ];
 
   return (
@@ -177,7 +184,6 @@ const Account = () => {
                 </Card>
 
                 <div className="space-y-6">
-                  {/* Status cont */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Status cont</CardTitle>
@@ -204,7 +210,6 @@ const Account = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Utilizare */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Utilizare luna aceasta</CardTitle>
@@ -350,42 +355,67 @@ const Account = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {savedMaterials.map((material) => (
-                      <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0">
-                            <FileText className="h-8 w-8 text-gray-400" />
+                  {materialsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-gray-500">Se încarcă materialele...</div>
+                    </div>
+                  ) : materials && materials.length > 0 ? (
+                    <div className="space-y-4">
+                      {materials.map((material) => (
+                        <div key={material.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0">
+                              <FileText className="h-8 w-8 text-gray-400" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{material.title}</h4>
+                              <p className="text-sm text-gray-500">
+                                {material.material_type === 'plan_lectie' ? 'Plan lecție' : 
+                                 material.material_type === 'prezentare' ? 'Prezentare' :
+                                 material.material_type.charAt(0).toUpperCase() + material.material_type.slice(1)} • {material.subject} • {new Date(material.created_at).toLocaleDateString('ro-RO')}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{material.title}</h4>
-                            <p className="text-sm text-gray-500">
-                              {material.type} • {material.subject} • {material.date}
-                            </p>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {getFileExtension(material.material_type)}
+                            </Badge>
+                            {material.download_url ? (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownload(material.download_url, material.title, material.material_type)}
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Descarcă
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" disabled>
+                                <Download className="h-4 w-4 mr-1" />
+                                Procesare...
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-400">{material.size}</span>
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-1" />
-                            Descarcă
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Vezi
-                          </Button>
-                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-6 text-center">
-                    <Button variant="outline">
-                      Încarcă mai multe materiale
-                    </Button>
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Niciun material generat încă
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        Generează primul tău material pentru a-l vedea aici.
+                      </p>
+                      <Button className="bg-eduai-blue hover:bg-eduai-blue/90">
+                        Generează material
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

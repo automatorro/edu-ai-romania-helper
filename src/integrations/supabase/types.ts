@@ -14,6 +14,7 @@ export type Database = {
           content: Json
           created_at: string
           difficulty: string | null
+          download_url: string | null
           grade_level: string | null
           id: string
           material_type: Database["public"]["Enums"]["material_type"]
@@ -26,6 +27,7 @@ export type Database = {
           content: Json
           created_at?: string
           difficulty?: string | null
+          download_url?: string | null
           grade_level?: string | null
           id?: string
           material_type: Database["public"]["Enums"]["material_type"]
@@ -38,6 +40,7 @@ export type Database = {
           content?: Json
           created_at?: string
           difficulty?: string | null
+          download_url?: string | null
           grade_level?: string | null
           id?: string
           material_type?: Database["public"]["Enums"]["material_type"]
