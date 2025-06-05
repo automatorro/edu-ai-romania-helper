@@ -76,12 +76,13 @@ serve(async (req) => {
 
     console.log('Gemini API key found, generating content...')
 
-    // Generate content using Gemini API
+    // Generate content using Gemini API with correct model
     const prompt = createPrompt(materialType, subject, gradeLevel, difficulty, additionalInfo)
     console.log('Generated prompt:', prompt.substring(0, 200) + '...')
     
-    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + geminiApiKey
-    console.log('Making request to Gemini API...')
+    // Updated URL and model for Gemini 1.5 Flash
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`
+    console.log('Making request to Gemini API with model gemini-1.5-flash...')
     
     const response = await fetch(geminiUrl, {
       method: 'POST',
@@ -130,7 +131,7 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           content: generatedContent,
-          message: 'Material generat cu succes! (Mod testare - funcționalitate completă cu AI)'
+          message: 'Material generat cu succes cu AI! (Mod testare - funcționalitate completă)'
         }),
         { 
           headers: { 
