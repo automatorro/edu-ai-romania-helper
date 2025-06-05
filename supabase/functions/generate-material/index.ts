@@ -17,6 +17,8 @@ serve(async (req) => {
     const requestBody = await req.json()
     const { materialType, subject, gradeLevel, difficulty, additionalInfo, testMode } = requestBody
     
+    console.log('Request body:', requestBody)
+    
     if (!materialType || !subject || !gradeLevel || !difficulty) {
       throw new Error('Parametrii obligatorii lipsesc')
     }
@@ -68,13 +70,20 @@ serve(async (req) => {
     // Get Gemini API key
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     if (!geminiApiKey) {
-      throw new Error('Configurarea serverului este incompletă')
+      console.error('GEMINI_API_KEY not found in environment')
+      throw new Error('Configurarea serverului este incompletă - cheia API lipsește')
     }
+
+    console.log('Gemini API key found, generating content...')
 
     // Generate content using Gemini API
     const prompt = createPrompt(materialType, subject, gradeLevel, difficulty, additionalInfo)
+    console.log('Generated prompt:', prompt.substring(0, 200) + '...')
     
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + geminiApiKey, {
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + geminiApiKey
+    console.log('Making request to Gemini API...')
+    
+    const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -84,23 +93,39 @@ serve(async (req) => {
           parts: [{
             text: prompt
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
       })
     })
 
+    console.log('Gemini API response status:', response.status)
+    
     if (!response.ok) {
-      throw new Error('Eroare la generarea conținutului')
+      const errorText = await response.text()
+      console.error('Gemini API error response:', errorText)
+      throw new Error(`Eroare API Gemini: ${response.status} - ${errorText}`)
     }
 
     const aiResponse = await response.json()
+    console.log('Gemini API response received:', !!aiResponse.candidates)
+    
     const generatedContent = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!generatedContent) {
-      throw new Error('Nu s-a putut genera conținutul')
+      console.error('No content generated:', aiResponse)
+      throw new Error('Nu s-a putut genera conținutul - răspuns gol de la AI')
     }
+
+    console.log('Content generated successfully, length:', generatedContent.length)
 
     // Pentru modul de testare, nu salvăm în baza de date
     if (testMode) {
+      console.log('Test mode - returning generated content without saving')
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -210,7 +235,7 @@ function createPrompt(materialType: string, subject: string, gradeLevel: string,
   
   const specificInstructions = {
     quiz: 'Creează un quiz cu 10 întrebări cu variante multiple de răspuns (A, B, C, D). Include răspunsurile corecte și explicațiile la sfârșitul quiz-ului. Formatează răspunsul în JSON cu structura: {"title": "...", "questions": [{"question": "...", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "..."}]}',
-    plan_lectie: 'Creează un plan de lecție detaliat cu obiective, activități, resurse necesare și evaluare. Structurează-l în secțiuni clare. Formatează răspunsul în JSON cu structura: {"title": "...", "duration": "...", "objectives": [...], "activities": [{"name": "...", "duration": "...", "description": "..."}], "resources": [...], "evaluation": "..."}',
+    plan_lectie: 'Creează un plan de lecție detaliat cu obiective, activități, resurse necesare și evaluare. Structurează-l în secțiuni claire. Formatează răspunsul în JSON cu structura: {"title": "...", "duration": "...", "objectives": [...], "activities": [{"name": "...", "duration": "...", "description": "..."}], "resources": [...], "evaluation": "..."}',
     prezentare: 'Creează o prezentare structurată cu slide-uri, incluzând introducere, dezvoltare și concluzii. Menționează punctele cheie pentru fiecare slide. Formatează răspunsul în JSON cu structura: {"title": "...", "slides": [{"title": "...", "content": "..."}]}',
     analogie: 'Creează analogii creative și ușor de înțeles care să explice conceptele complexe prin comparații cu situații familiare elevilor. Formatează răspunsul în JSON cu structura: {"title": "...", "analogies": [{"concept": "...", "analogy": "...", "explanation": "..."}], "examples": [...]}',
     evaluare: 'Creează o evaluare cu întrebări variate (întrebări scurte, dezvoltare, probleme practice). Include baremul de notare. Formatează răspunsul în JSON cu structura: {"title": "...", "questions": [{"question": "...", "type": "...", "points": 10}], "answers": [...], "gradingRubric": "..."}'
