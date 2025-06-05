@@ -14,10 +14,13 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO ''
+SET search_path TO 'public'
 AS $function$
 BEGIN
-  -- Insert profile with proper enum casting
+  -- Log pentru debugging
+  RAISE LOG 'handle_new_user triggered for user: %', NEW.email;
+  
+  -- Insert profile folosind doar coloanele care există și sunt necesare
   INSERT INTO public.profiles (user_id, name, user_type, provider, avatar_url)
   VALUES (
     NEW.id,
@@ -36,16 +39,24 @@ BEGIN
     NEW.raw_user_meta_data ->> 'avatar_url'
   );
   
-  -- Assign admin role if email is admin@automator.ro, otherwise assign user role
+  RAISE LOG 'Profile created successfully for user: %', NEW.email;
+  
+  -- Assign role
   IF NEW.email = 'admin@automator.ro' THEN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'admin');
+    RAISE LOG 'Admin role assigned to: %', NEW.email;
   ELSE
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'user');
+    RAISE LOG 'User role assigned to: %', NEW.email;
   END IF;
   
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE LOG 'Error in handle_new_user for %: % %', NEW.email, SQLERRM, SQLSTATE;
+    RAISE;
 END;
 $function$;
 
