@@ -13,43 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Nu ești autentificat')
-    }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Get user from token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      throw new Error('Token invalid sau expirat')
-    }
-
-    // Get user profile with role information
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      throw new Error('Profilul utilizatorului nu a fost găsit')
-    }
-
-    // Check authorization - admins have unlimited access, others must be within limits
-    if (profile.role !== 'admin' && profile.materials_count >= profile.materials_limit) {
-      throw new Error('Ai atins limita de materiale generate. Upgrade la premium pentru mai multe materiale.')
-    }
-
-    // Parse and validate request body
-    const { materialType, subject, gradeLevel, difficulty, additionalInfo } = await req.json()
+    // Parse request body
+    const requestBody = await req.json()
+    const { materialType, subject, gradeLevel, difficulty, additionalInfo, testMode } = requestBody
     
     if (!materialType || !subject || !gradeLevel || !difficulty) {
       throw new Error('Parametrii obligatorii lipsesc')
@@ -59,6 +25,44 @@ serve(async (req) => {
     const validTypes = ['quiz', 'plan_lectie', 'prezentare', 'analogie', 'evaluare']
     if (!validTypes.includes(materialType)) {
       throw new Error('Tipul de material nu este valid')
+    }
+
+    // Pentru modul de testare, nu verificăm autentificarea
+    if (!testMode) {
+      // Get the authorization header
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        throw new Error('Nu ești autentificat')
+      }
+
+      // Initialize Supabase client
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+      // Get user from token
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      
+      if (authError || !user) {
+        throw new Error('Token invalid sau expirat')
+      }
+
+      // Get user profile with role information
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profileError || !profile) {
+        throw new Error('Profilul utilizatorului nu a fost găsit')
+      }
+
+      // Check authorization - admins have unlimited access, others must be within limits
+      if (profile.role !== 'admin' && profile.materials_count >= profile.materials_limit) {
+        throw new Error('Ai atins limita de materiale generate. Upgrade la premium pentru mai multe materiale.')
+      }
     }
 
     // Get Gemini API key
@@ -95,6 +99,33 @@ serve(async (req) => {
       throw new Error('Nu s-a putut genera conținutul')
     }
 
+    // Pentru modul de testare, nu salvăm în baza de date
+    if (testMode) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          content: generatedContent,
+          message: 'Material generat cu succes! (Mod testare - funcționalitate completă cu AI)'
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
+
+    // Pentru utilizatorii autentificați, salvăm în baza de date
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get user from token again for saving
+    const authHeader = req.headers.get('Authorization')
+    const token = authHeader!.replace('Bearer ', '')
+    const { data: { user } } = await supabase.auth.getUser(token)
+
     // Create material title
     const title = `${materialType.charAt(0).toUpperCase() + materialType.slice(1)} - ${subject} (Clasa ${gradeLevel})`
 
@@ -102,7 +133,7 @@ serve(async (req) => {
     const { data: material, error: saveError } = await supabase
       .from('materials')
       .insert({
-        user_id: user.id,
+        user_id: user!.id,
         title,
         material_type: materialType,
         subject,
@@ -122,11 +153,17 @@ serve(async (req) => {
     }
 
     // Update materials count (only for non-admin users)
-    if (profile.role !== 'admin') {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user!.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ materials_count: profile.materials_count + 1 })
-        .eq('user_id', user.id)
+        .update({ materials_count: supabase.sql`materials_count + 1` })
+        .eq('user_id', user!.id)
 
       if (updateError) {
         console.error('Count update error:', updateError)
@@ -138,7 +175,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         material,
-        message: profile.role === 'admin' ? 'Material generat cu succes! (Admin - generări nelimitate)' : 'Material generat cu succes!'
+        message: profile?.role === 'admin' ? 'Material generat cu succes! (Admin - generări nelimitate)' : 'Material generat cu succes!'
       }),
       { 
         headers: { 
@@ -172,12 +209,12 @@ function createPrompt(materialType: string, subject: string, gradeLevel: string,
   const additionalContext = additionalInfo ? `\n\nInformații suplimentare: ${additionalInfo}` : ''
   
   const specificInstructions = {
-    quiz: 'Creează un quiz cu 10 întrebări cu variante multiple de răspuns (A, B, C, D). Include răspunsurile corecte la sfârșitul quiz-ului.',
-    plan_lectie: 'Creează un plan de lecție detaliat cu obiective, activități, resurse necesare și evaluare. Structurează-l în secțiuni clare.',
-    prezentare: 'Creează o prezentare structurată cu slide-uri, incluzând introducere, dezvoltare și concluzii. Menționează punctele cheie pentru fiecare slide.',
-    analogie: 'Creează analogii creative și ușor de înțeles care să explice conceptele complexe prin comparații cu situații familiare elevilor.',
-    evaluare: 'Creează o evaluare cu întrebări variate (întrebări scurte, dezvoltare, probleme practice). Include baremul de notare.'
+    quiz: 'Creează un quiz cu 10 întrebări cu variante multiple de răspuns (A, B, C, D). Include răspunsurile corecte și explicațiile la sfârșitul quiz-ului. Formatează răspunsul în JSON cu structura: {"title": "...", "questions": [{"question": "...", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "..."}]}',
+    plan_lectie: 'Creează un plan de lecție detaliat cu obiective, activități, resurse necesare și evaluare. Structurează-l în secțiuni clare. Formatează răspunsul în JSON cu structura: {"title": "...", "duration": "...", "objectives": [...], "activities": [{"name": "...", "duration": "...", "description": "..."}], "resources": [...], "evaluation": "..."}',
+    prezentare: 'Creează o prezentare structurată cu slide-uri, incluzând introducere, dezvoltare și concluzii. Menționează punctele cheie pentru fiecare slide. Formatează răspunsul în JSON cu structura: {"title": "...", "slides": [{"title": "...", "content": "..."}]}',
+    analogie: 'Creează analogii creative și ușor de înțeles care să explice conceptele complexe prin comparații cu situații familiare elevilor. Formatează răspunsul în JSON cu structura: {"title": "...", "analogies": [{"concept": "...", "analogy": "...", "explanation": "..."}], "examples": [...]}',
+    evaluare: 'Creează o evaluare cu întrebări variate (întrebări scurte, dezvoltare, probleme practice). Include baremul de notare. Formatează răspunsul în JSON cu structura: {"title": "...", "questions": [{"question": "...", "type": "...", "points": 10}], "answers": [...], "gradingRubric": "..."}'
   }
 
-  return `${basePrompt}\n\n${specificInstructions[materialType as keyof typeof specificInstructions] || 'Generează materialul educațional solicitat.'}${additionalContext}\n\nRăspunde în limba română și asigură-te că conținutul este potrivit pentru nivelul specificat.`
+  return `${basePrompt}\n\n${specificInstructions[materialType as keyof typeof specificInstructions] || 'Generează materialul educațional solicitat.'}${additionalContext}\n\nRăspunde în limba română și asigură-te că conținutul este potrivit pentru nivelul specificat. IMPORTANT: Răspunde DOAR cu JSON-ul valid, fără text suplimentar înainte sau după.`
 }

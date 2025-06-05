@@ -362,8 +362,8 @@ const Generator = () => {
                 <div className="flex">
                   <div className="ml-3">
                     <p className="text-sm text-green-700">
-                      <strong>🎯 Testează acum fără cont!</strong> Poți genera materiale demo pentru a testa funcționalitatea. 
-                      Pentru materiale complete generate cu AI și salvare, creează un cont gratuit.
+                      <strong>🚀 Testare completă disponibilă!</strong> Poți genera materiale complete cu AI fără să ai nevoie de cont. 
+                      Funcționalitatea este identică cu cea pentru utilizatorii înregistrăți - materiale reale generate cu AI!
                     </p>
                   </div>
                 </div>
@@ -378,7 +378,7 @@ const Generator = () => {
                 <CardHeader>
                   <CardTitle>Configurare material</CardTitle>
                   <CardDescription>
-                    Completează detaliile pentru a genera materialul perfect
+                    Completează detaliile pentru a genera materialul perfect cu AI
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -481,13 +481,13 @@ const Generator = () => {
                       {isGenerating ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Se generează...
+                          Se generează cu AI...
                         </>
                       ) : (
                         <>
                           {formData.materialType && getTypeIcon(formData.materialType)}
                           <span className="ml-2">
-                            {user ? 'Generează material' : 'Generează material demo'}
+                            {user ? 'Generează material cu AI' : 'Generează material cu AI (Testare)'}
                           </span>
                         </>
                       )}
@@ -507,10 +507,10 @@ const Generator = () => {
                     {!user && (
                       <div className="p-3 bg-blue-50 rounded-lg text-center">
                         <p className="text-sm text-blue-800">
-                          <strong>🎯 Testare gratuită:</strong> Poți genera materiale demo fără cont pentru a testa funcționalitatea.
+                          <strong>🎯 Testare completă cu AI:</strong> Generezi materiale reale cu inteligență artificială, identic cu versiunea pentru conturi înregistrate.
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          Pentru materiale complete cu AI și salvare, creează un cont gratuit.
+                          Pentru salvare și management avansat, creează un cont gratuit.
                         </p>
                       </div>
                     )}
@@ -527,8 +527,8 @@ const Generator = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         {getTypeIcon(generatedMaterial.type)}
-                        <CardTitle>Material generat</CardTitle>
-                        {!user && <Badge variant="outline">Demo</Badge>}
+                        <CardTitle>Material generat cu AI</CardTitle>
+                        {!user && <Badge variant="outline">Testare</Badge>}
                       </div>
                       <div className="flex space-x-2">
                         {user && (
@@ -552,7 +552,7 @@ const Generator = () => {
                     <CardDescription>
                       {getTypeLabel(generatedMaterial.type)} pentru {generatedMaterial.subject} 
                       • Nivel {generatedMaterial.difficulty}
-                      {!user && ' • Versiune demo'}
+                      {!user && ' • Generat cu AI în modul testare'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -561,9 +561,9 @@ const Generator = () => {
                     {!user && (
                       <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
                         <div className="text-center">
-                          <h4 className="font-semibold text-blue-900 mb-2">🚀 Vrei materiale complete generate cu AI?</h4>
+                          <h4 className="font-semibold text-blue-900 mb-2">🚀 Material generat cu AI complet!</h4>
                           <p className="text-sm text-blue-700 mb-3">
-                            Creează un cont gratuit pentru materiale complete, salvare automată și funcții avansate!
+                            Ai generat un material real cu inteligență artificială. Pentru salvare, management avansat și funcții premium, creează un cont gratuit!
                           </p>
                           <div className="flex gap-2 justify-center">
                             <Button size="sm" className="bg-eduai-blue hover:bg-eduai-blue/90">
@@ -583,12 +583,12 @@ const Generator = () => {
                   <CardContent className="text-center">
                     <div className="text-6xl mb-4">🤖</div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {user ? 'Gata să generez materiale educaționale!' : 'Testează generarea de materiale!'}
+                      {user ? 'Gata să generez materiale cu AI!' : 'Testează generarea completă cu AI!'}
                     </h3>
                     <p className="text-gray-600">
                       {user 
                         ? 'Completează formularul din stânga și voi crea materialul perfect pentru nevoile tale educaționale.'
-                        : 'Completează formularul din stânga pentru a testa generarea de materiale demo fără să ai nevoie de cont!'
+                        : 'Completează formularul din stânga pentru a genera materiale educaționale reale cu inteligență artificială - fără limite în modul de testare!'
                       }
                     </p>
                   </CardContent>
