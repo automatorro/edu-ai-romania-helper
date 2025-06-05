@@ -33,7 +33,11 @@ export const useAuthOperations = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: window.location.origin + '/dashboard',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
@@ -99,18 +103,28 @@ export const useAuthOperations = () => {
   const register = async (email: string, password: string, name: string, userType: User['userType']) => {
     try {
       console.log('Attempting registration for:', email);
+      console.log('User type:', userType);
+      console.log('Name:', name);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: name,
-            user_type: userType
-          }
+            user_type: userType,
+            name: name
+          },
+          emailRedirectTo: window.location.origin + '/dashboard'
         }
       });
 
-      if (error) throw error;
+      console.log('Registration response:', { data, error });
+
+      if (error) {
+        console.error('Registration error details:', error);
+        throw error;
+      }
 
       if (data.user && !data.user.email_confirmed_at) {
         toast({
@@ -126,9 +140,18 @@ export const useAuthOperations = () => {
     } catch (error) {
       const authError = error as AuthError;
       console.error('Registration error:', authError);
+      
+      let errorMessage = "Nu am putut crea contul. Încearcă din nou.";
+      
+      if (authError.message?.includes('already registered')) {
+        errorMessage = "Acest email este deja înregistrat. Încearcă să te autentifici.";
+      } else if (authError.message?.includes('Database error')) {
+        errorMessage = "Eroare de bază de date. Te rugăm să încerci din nou.";
+      }
+      
       toast({
         title: "Eroare",
-        description: authError.message || "Nu am putut crea contul. Încearcă din nou.",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;

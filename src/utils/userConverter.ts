@@ -8,6 +8,7 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
 
   try {
     console.log('Converting Supabase user:', supabaseUser.email);
+    console.log('User metadata:', supabaseUser.user_metadata);
     
     // Fetch the user's profile from the profiles table
     const { data: profile, error: profileError } = await supabase
@@ -16,6 +17,8 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       .eq('user_id', supabaseUser.id)
       .single();
 
+    console.log('Profile query result:', { profile, profileError });
+
     if (profileError) {
       console.error('Error fetching profile:', profileError);
       
@@ -23,6 +26,43 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
       // Return a minimal user object and let the trigger create the profile
       if (profileError.code === 'PGRST116') {
         console.log('Profile not found for user, might be creating...');
+        
+        // Wait a bit and try again once in case the trigger is still processing
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const { data: retryProfile, error: retryError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', supabaseUser.id)
+          .single();
+        
+        if (retryProfile) {
+          console.log('Profile found on retry:', retryProfile);
+          
+          // Fetch user role
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', supabaseUser.id)
+            .single();
+
+          const userRole = roleData?.role || 'user';
+
+          return {
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            name: retryProfile.name || supabaseUser.email?.split('@')[0] || 'Utilizator',
+            userType: retryProfile.user_type,
+            subscription: retryProfile.subscription,
+            materialsCount: retryProfile.materials_count,
+            materialsLimit: retryProfile.materials_limit,
+            avatar: retryProfile.avatar_url || supabaseUser.user_metadata?.avatar_url,
+            provider: retryProfile.provider || supabaseUser.app_metadata?.provider || 'email',
+            role: userRole
+          };
+        }
+        
+        // Still no profile, return minimal user
         return {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
