@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEmailConfirmation } from '@/hooks/useEmailConfirmation';
@@ -38,8 +39,7 @@ export const useAuthOperations = () => {
       
       // Verificăm starea inițială
       console.log('🔍 Checking Supabase client configuration...');
-      console.log('🔗 Supabase URL:', supabase.supabaseUrl);
-      console.log('🔑 Supabase Key exists:', !!supabase.supabaseKey);
+      console.log('🔗 Supabase URL configured:', !!supabase);
       
       console.log('📝 Attempting Supabase auth.signUp...');
       const { data, error } = await supabase.auth.signUp({

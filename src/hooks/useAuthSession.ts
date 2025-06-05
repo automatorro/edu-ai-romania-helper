@@ -89,9 +89,6 @@ export const useAuthSession = () => {
         if (convertedUser) {
           setUser(convertedUser);
         }
-      } else if (event === 'SIGNED_UP' && session?.user) {
-        console.log('📝 User signed up successfully');
-        console.log('✉️ Email confirmed:', session.user.email_confirmed_at ? 'YES' : 'NO');
       }
       
       setIsLoading(false);
