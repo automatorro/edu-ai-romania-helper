@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEmailConfirmation } from '@/hooks/useEmailConfirmation';
@@ -32,12 +31,17 @@ export const useAuthOperations = () => {
 
   const register = async (email: string, password: string, name: string, userType: User['userType']) => {
     try {
-      console.log('📝 Starting registration...');
+      console.log('🔥 STARTING REGISTRATION PROCESS');
       console.log('📧 Email:', email);
       console.log('👤 Name:', name);
       console.log('🏷️ User type:', userType);
       
-      // Simplificăm - nu trimitem email de confirmare automat
+      // Verificăm starea inițială
+      console.log('🔍 Checking Supabase client configuration...');
+      console.log('🔗 Supabase URL:', supabase.supabaseUrl);
+      console.log('🔑 Supabase Key exists:', !!supabase.supabaseKey);
+      
+      console.log('📝 Attempting Supabase auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -47,37 +51,49 @@ export const useAuthOperations = () => {
             user_type: userType,
             name: name
           }
-          // Eliminăm emailRedirectTo deocamdată pentru simplificare
         }
       });
 
-      console.log('📊 Registration response data:', data);
-      console.log('❗ Registration response error:', error);
+      console.log('📊 Supabase signUp response:');
+      console.log('✅ Data:', JSON.stringify(data, null, 2));
+      console.log('❗ Error:', error ? JSON.stringify(error, null, 2) : 'No error');
 
       if (error) {
-        console.error('❌ Registration error details:', error);
+        console.error('❌ Supabase signUp error details:', error);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error status:', error.status);
         throw error;
       }
 
       if (data.user) {
-        console.log('✅ User created successfully:', data.user.id);
+        console.log('✅ User object created successfully:');
+        console.log('🆔 User ID:', data.user.id);
+        console.log('📧 User email:', data.user.email);
+        console.log('📋 User metadata:', JSON.stringify(data.user.user_metadata, null, 2));
+        console.log('📋 App metadata:', JSON.stringify(data.user.app_metadata, null, 2));
+        console.log('✉️ Email confirmed:', data.user.email_confirmed_at ? 'YES' : 'NO');
         
-        // Încercăm să trimitem email de confirmare manual doar dacă utilizatorul a fost creat
-        try {
-          await sendConfirmationEmail(email, name);
-          console.log('📨 Confirmation email sent');
-        } catch (emailError) {
-          console.error('⚠️ Email sending failed, but user was created:', emailError);
+        // Verificăm dacă sesiunea este creată
+        if (data.session) {
+          console.log('🎫 Session created:', !!data.session);
+          console.log('🎫 Access token exists:', !!data.session.access_token);
+        } else {
+          console.log('⚠️ No session created - user needs email confirmation');
         }
         
         toast({
           title: "Cont creat cu succes!",
-          description: "Verifică email-ul pentru a-ți confirma contul.",
+          description: "Contul a fost creat. Poți începe să folosești aplicația.",
         });
+      } else {
+        console.error('❌ No user object in response despite no error');
+        throw new Error('User creation failed - no user object returned');
       }
     } catch (error) {
       const authError = error as AuthError;
-      console.error('❌ Registration error:', authError);
+      console.error('❌ Registration error caught:', authError);
+      console.error('❌ Error type:', typeof authError);
+      console.error('❌ Error constructor:', authError.constructor.name);
       
       let errorMessage = "Nu am putut crea contul. Încearcă din nou.";
       
@@ -87,6 +103,9 @@ export const useAuthOperations = () => {
         errorMessage = "Eroare de bază de date. Te rugăm să încerci din nou în câteva momente.";
       } else if (authError.message?.includes('User already registered')) {
         errorMessage = "Acest email este deja înregistrat. Încearcă să te autentifici.";
+      } else if (authError.message?.includes('relation') && authError.message?.includes('does not exist')) {
+        errorMessage = "Eroare de configurare bază de date. Contactează administratorul.";
+        console.error('🚨 DATABASE SCHEMA ERROR - missing table or relation');
       }
       
       toast({
