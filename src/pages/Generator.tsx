@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,122 +48,32 @@ const Generator = () => {
       additionalInfo: formData.additionalInfo
     }, {
       onSuccess: (data) => {
-        if (data.data) {
+        console.log('Generated material data:', data);
+        if (data.data || data.content) {
+          const content = data.content || data.data.content;
+          console.log('Content received:', content);
+          
+          // Handle both string and object responses
+          let parsedContent = content;
+          if (typeof content === 'string') {
+            try {
+              parsedContent = JSON.parse(content);
+            } catch (e) {
+              // If it's not JSON, treat as raw text
+              parsedContent = { rawText: content };
+            }
+          }
+          
           setGeneratedMaterial({
-            type: data.data.type,
-            subject: data.data.subject || formData.subject,
-            difficulty: data.data.difficulty || formData.difficulty,
-            content: data.data.content,
-            createdAt: data.data.created_at
+            type: data.data?.type || formData.materialType,
+            subject: data.data?.subject || formData.subject,
+            difficulty: data.data?.difficulty || formData.difficulty,
+            content: parsedContent,
+            createdAt: data.data?.created_at || new Date().toISOString()
           });
         }
       }
     });
-  };
-
-  const generateMockContent = (type: string, subject: string, difficulty: string) => {
-    switch (type) {
-      case 'quiz':
-        return {
-          title: `Quiz ${subject} - Nivel ${difficulty}`,
-          questions: [
-            {
-              question: `Care este principalul concept în ${subject}?`,
-              options: ['Opțiunea A', 'Opțiunea B', 'Opțiunea C', 'Opțiunea D'],
-              correct: 0,
-              explanation: 'Explicația detaliată pentru această întrebare...'
-            },
-            {
-              question: `Cum se aplică ${subject} în viața de zi cu zi?`,
-              options: ['Prin exemple practice', 'Prin teorie', 'Prin exerciții', 'Prin toate variantele'],
-              correct: 3,
-              explanation: 'Această întrebare testează înțelegerea aplicativă...'
-            },
-            // ... încă 8 întrebări similare
-          ]
-        };
-      
-      case 'plan_lectie':
-        return {
-          title: `Plan de lecție ${subject}`,
-          duration: '50 minute',
-          objectives: [
-            `Elevii vor înțelege conceptele de bază din ${subject}`,
-            `Elevii vor putea aplica cunoștințele în situații practice`,
-            `Elevii vor dezvolta gândirea critică în domeniu`
-          ],
-          activities: [
-            { name: 'Introducere', duration: '10 min', description: 'Prezentarea subiectului și obiectivelor' },
-            { name: 'Dezvoltare', duration: '25 min', description: 'Explicarea conceptelor principale cu exemple' },
-            { name: 'Aplicare', duration: '10 min', description: 'Exerciții practice și diskuții' },
-            { name: 'Încheiere', duration: '5 min', description: 'Recapitulare și teme pentru acasă' }
-          ],
-          resources: ['Manual', 'Prezentare PowerPoint', 'Fișe de lucru', 'Resurse online'],
-          evaluation: 'Evaluare continuă prin întrebări și exerciții practice'
-        };
-      
-      case 'prezentare':
-        return {
-          title: `Prezentare ${subject}`,
-          slides: [
-            { title: `Introducere în ${subject}`, content: 'Prezentarea subiectului și importanța acestuia' },
-            { title: 'Concepte principale', content: 'Definițiile și explicațiile de bază' },
-            { title: 'Exemple practice', content: 'Aplicații din viața reală și cazuri de studiu' },
-            { title: 'Exerciții', content: 'Probleme și întrebări pentru consolidare' },
-            { title: 'Concluzii', content: 'Rezumatul punctelor cheie și direcții viitoare' }
-          ]
-        };
-      
-      case 'analogie':
-        return {
-          title: `Analogii și exemple pentru ${subject}`,
-          analogies: [
-            {
-              concept: `Primul concept din ${subject}`,
-              analogy: 'Ca și cum ai construi o casă - ai nevoie de fundații solide',
-              explanation: 'Această analogie ajută la înțelegerea importanței conceptelor de bază'
-            },
-            {
-              concept: `Al doilea concept din ${subject}`,
-              analogy: 'Precum rețeta unei prăjituri - fiecare ingredient are rolul său',
-              explanation: 'Demonstrează cum diferitele elemente lucrează împreună'
-            }
-          ],
-          examples: [
-            `Exemplu 1: Aplicarea ${subject} în bucătărie`,
-            `Exemplu 2: Folosirea ${subject} în sport`,
-            `Exemplu 3: ${subject} în tehnologie`
-          ]
-        };
-      
-      case 'evaluare':
-        return {
-          title: `Evaluare finală ${subject}`,
-          questions: [
-            {
-              question: `Definește conceptul principal din ${subject}`,
-              type: 'descriptive',
-              points: 10
-            },
-            {
-              question: `Exemplifică aplicarea ${subject} în două domenii diferite`,
-              type: 'application',
-              points: 15
-            }
-          ],
-          answers: [
-            {
-              question: 1,
-              answer: 'Răspuns complet pentru cadrul didactic...',
-              keyPoints: ['Punct cheie 1', 'Punct cheie 2', 'Punct cheie 3']
-            }
-          ],
-          gradingRubric: 'Criteriile de evaluare și punctajul pentru fiecare secțiune'
-        };
-      
-      default:
-        return { message: 'Material generat cu succes!' };
-    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -198,150 +109,202 @@ const Generator = () => {
     if (!generatedMaterial) return null;
 
     const { content, type } = generatedMaterial;
+    
+    // If content is just raw text, display it as-is
+    if (typeof content === 'string' || content.rawText) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <pre className="whitespace-pre-wrap text-sm">{content.rawText || content}</pre>
+          </div>
+        </div>
+      );
+    }
 
-    switch (type) {
-      case 'quiz':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">{content.title}</h3>
-            <div className="space-y-4">
-              {content.questions.map((q: any, index: number) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle className="text-base">Întrebarea {index + 1}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium mb-3">{q.question}</p>
-                    <div className="space-y-2">
-                      {q.options.map((option: string, optIndex: number) => (
-                        <div key={optIndex} className={`p-2 rounded ${optIndex === q.correct ? 'bg-green-100 text-green-800' : 'bg-gray-50'}`}>
-                          {String.fromCharCode(65 + optIndex)}. {option}
-                          {optIndex === q.correct && ' ✓'}
+    // Try to render structured content, with fallbacks
+    try {
+      switch (type) {
+        case 'quiz':
+          if (content.questions && Array.isArray(content.questions)) {
+            return (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold">{content.title || `Quiz ${generatedMaterial.subject}`}</h3>
+                <div className="space-y-4">
+                  {content.questions.map((q: any, index: number) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="text-base">Întrebarea {index + 1}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium mb-3">{q.question}</p>
+                        {q.options && Array.isArray(q.options) && (
+                          <div className="space-y-2">
+                            {q.options.map((option: string, optIndex: number) => (
+                              <div key={optIndex} className={`p-2 rounded ${optIndex === q.correct ? 'bg-green-100 text-green-800' : 'bg-gray-50'}`}>
+                                {String.fromCharCode(65 + optIndex)}. {option}
+                                {optIndex === q.correct && ' ✓'}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {q.explanation && (
+                          <p className="text-sm text-gray-600 mt-3">
+                            <strong>Explicație:</strong> {q.explanation}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          break;
+
+        case 'plan_lectie':
+          return (
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold">{content.title || `Plan de lecție ${generatedMaterial.subject}`}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {content.objectives && Array.isArray(content.objectives) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Obiective</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {content.objectives.map((obj: string, index: number) => (
+                          <li key={index} className="flex items-start space-x-2">
+                            <span className="text-green-500">•</span>
+                            <span className="text-sm">{obj}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {content.activities && Array.isArray(content.activities) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Activități ({content.duration || '50 minute'})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {content.activities.map((activity: any, index: number) => (
+                          <div key={index} className="border-l-2 border-eduai-blue pl-3">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">{activity.name}</span>
+                              <span className="text-sm text-gray-500">{activity.duration}</span>
+                            </div>
+                            <p className="text-sm text-gray-600">{activity.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          );
+
+        case 'prezentare':
+          if (content.slides && Array.isArray(content.slides)) {
+            return (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold">{content.title || `Prezentare ${generatedMaterial.subject}`}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {content.slides.map((slide: any, index: number) => (
+                    <Card key={index} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Slide {index + 1}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <h4 className="font-semibold mb-2">{slide.title}</h4>
+                        <p className="text-sm text-gray-600">{slide.content}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          break;
+
+        case 'analogie':
+          return (
+            <div className="space-y-6">
+              <h3 className="text-xl font-bold">{content.title || `Analogii ${generatedMaterial.subject}`}</h3>
+              <div className="space-y-4">
+                {content.analogies && Array.isArray(content.analogies) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Analogii</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {content.analogies.map((analogy: any, index: number) => (
+                        <div key={index} className="mb-4 p-4 bg-yellow-50 rounded-lg">
+                          <h4 className="font-semibold text-yellow-800">{analogy.concept}</h4>
+                          <p className="text-yellow-700 italic">"{analogy.analogy}"</p>
+                          <p className="text-sm text-yellow-600 mt-2">{analogy.explanation}</p>
                         </div>
                       ))}
-                    </div>
-                    <p className="text-sm text-gray-600 mt-3">
-                      <strong>Explicație:</strong> {q.explanation}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </div>
-          </div>
-        );
+          );
 
-      case 'plan_lectie':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">{content.title}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Obiective</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {content.objectives.map((obj: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <span className="text-green-500">•</span>
-                        <span className="text-sm">{obj}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Activități ({content.duration})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {content.activities.map((activity: any, index: number) => (
-                      <div key={index} className="border-l-2 border-eduai-blue pl-3">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{activity.name}</span>
-                          <span className="text-sm text-gray-500">{activity.duration}</span>
-                        </div>
-                        <p className="text-sm text-gray-600">{activity.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
-
-      case 'prezentare':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">{content.title}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {content.slides.map((slide: any, index: number) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Slide {index + 1}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <h4 className="font-semibold mb-2">{slide.title}</h4>
-                    <p className="text-sm text-gray-600">{slide.content}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 'analogie':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">{content.title}</h3>
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Analogii</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {content.analogies.map((analogy: any, index: number) => (
-                    <div key={index} className="mb-4 p-4 bg-yellow-50 rounded-lg">
-                      <h4 className="font-semibold text-yellow-800">{analogy.concept}</h4>
-                      <p className="text-yellow-700 italic">"{analogy.analogy}"</p>
-                      <p className="text-sm text-yellow-600 mt-2">{analogy.explanation}</p>
-                    </div>
+        case 'evaluare':
+          if (content.questions && Array.isArray(content.questions)) {
+            return (
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold">{content.title || `Evaluare ${generatedMaterial.subject}`}</h3>
+                <div className="space-y-4">
+                  {content.questions.map((q: any, index: number) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="text-base flex justify-between">
+                          Întrebarea {index + 1}
+                          <Badge className="bg-eduai-blue text-white">{q.points || 10} puncte</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium mb-2">{q.question}</p>
+                        <p className="text-sm text-gray-500">Tip: {q.type || 'descriptive'}</p>
+                      </CardContent>
+                    </Card>
                   ))}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
+                </div>
+              </div>
+            );
+          }
+          break;
 
-      case 'evaluare':
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-bold">{content.title}</h3>
-            <div className="space-y-4">
-              {content.questions.map((q: any, index: number) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <CardTitle className="text-base flex justify-between">
-                      Întrebarea {index + 1}
-                      <Badge className="bg-eduai-blue text-white">{q.points} puncte</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-medium mb-2">{q.question}</p>
-                    <p className="text-sm text-gray-500">Tip: {q.type}</p>
-                  </CardContent>
-                </Card>
-              ))}
+        default:
+          // Fallback for any unstructured content
+          return (
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(content, null, 2)}</pre>
+              </div>
             </div>
-          </div>
-        );
-
-      default:
-        return <p>Material generat cu succes!</p>;
+          );
+      }
+    } catch (error) {
+      console.error('Error rendering content:', error);
     }
+
+    // Final fallback - display raw content
+    return (
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h4 className="font-semibold mb-3">Material generat:</h4>
+          <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(content, null, 2)}</pre>
+        </div>
+      </div>
+    );
   };
 
   return (
