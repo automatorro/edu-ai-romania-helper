@@ -52,7 +52,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -60,7 +60,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
-          id: string
+          id: string | null
           materials_count: number
           materials_limit: number
           name: string
@@ -68,13 +68,13 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"] | null
           subscription: Database["public"]["Enums"]["subscription_type"]
           updated_at: string
-          user_id: string | null
+          user_id: string
           user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          id: string
+          id?: string | null
           materials_count?: number
           materials_limit?: number
           name: string
@@ -82,13 +82,13 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"] | null
           subscription?: Database["public"]["Enums"]["subscription_type"]
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
-          id?: string
+          id?: string | null
           materials_count?: number
           materials_limit?: number
           name?: string
@@ -96,7 +96,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"] | null
           subscription?: Database["public"]["Enums"]["subscription_type"]
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: []
@@ -156,7 +156,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
