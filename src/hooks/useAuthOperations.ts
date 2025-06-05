@@ -146,11 +146,13 @@ export const useAuthOperations = () => {
       if (authError.message?.includes('already registered')) {
         errorMessage = "Acest email este deja înregistrat. Încearcă să te autentifici.";
       } else if (authError.message?.includes('Database error')) {
-        errorMessage = "Eroare de bază de date. Te rugăm să încerci din nou.";
+        errorMessage = "Eroare de bază de date. Te rugăm să încerci din nou în câteva momente.";
+      } else if (authError.message?.includes('User already registered')) {
+        errorMessage = "Acest email este deja înregistrat. Încearcă să te autentifici.";
       }
       
       toast({
-        title: "Eroare",
+        title: "Eroare la înregistrare",
         description: errorMessage,
         variant: "destructive",
       });
