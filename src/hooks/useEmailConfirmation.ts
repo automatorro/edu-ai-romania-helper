@@ -7,10 +7,13 @@ export const useEmailConfirmation = () => {
 
   const sendConfirmationEmail = async (email: string, name: string) => {
     try {
-      console.log('Sending confirmation email via edge function...');
+      console.log('📨 Attempting to send confirmation email...');
+      console.log('📧 To email:', email);
+      console.log('👤 For user:', name);
       
-      // Generate confirmation URL
+      // Verificăm dacă edge function există
       const confirmationUrl = `${window.location.origin}/confirm-email`;
+      console.log('🔗 Confirmation URL:', confirmationUrl);
       
       const { data, error } = await supabase.functions.invoke('send-confirmation-email', {
         body: {
@@ -20,12 +23,15 @@ export const useEmailConfirmation = () => {
         }
       });
 
+      console.log('📊 Email function response data:', data);
+      console.log('❗ Email function response error:', error);
+
       if (error) {
-        console.error('Error calling confirmation email function:', error);
+        console.error('❌ Error calling confirmation email function:', error);
         throw error;
       }
 
-      console.log('Confirmation email sent successfully:', data);
+      console.log('✅ Confirmation email sent successfully:', data);
       
       toast({
         title: "Email de confirmare trimis!",
@@ -34,12 +40,15 @@ export const useEmailConfirmation = () => {
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error sending confirmation email:', error);
+      console.error('❌ Error sending confirmation email:', error);
+      
+      // Nu blocăm înregistrarea dacă email-ul nu poate fi trimis
+      console.log('⚠️ Email sending failed, but continuing with registration process');
       
       toast({
-        title: "Eroare la trimiterea email-ului",
-        description: "Nu am putut trimite email-ul de confirmare. Încearcă din nou.",
-        variant: "destructive",
+        title: "Cont creat cu succes!",
+        description: "Contul a fost creat. Email-ul de confirmare nu a putut fi trimis, dar poți accesa aplicația.",
+        variant: "default",
       });
       
       return { success: false, error: error.message };
