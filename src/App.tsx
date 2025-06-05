@@ -23,11 +23,11 @@ import { supabase } from "./integrations/supabase/client";
 const OAuthRedirectHandler = () => {
   useEffect(() => {
     const handleRedirect = async () => {
-      const { data, error } = await supabase.auth.getSessionFromUrl();
+      const { data, error } = await supabase.auth.getSession();
       if (error) {
-        console.error("Error handling OAuth redirect:", error);
+        console.error("Error getting session:", error);
       } else if (data?.session) {
-        console.log("OAuth redirect session restored:", data.session.user?.email);
+        console.log("Session restored:", data.session.user?.email);
       }
     };
     handleRedirect();
