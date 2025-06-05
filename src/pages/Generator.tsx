@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useGenerateMaterial } from '@/hooks/useGenerateMaterial';
 import { Loader2, Download, Save, Share, BookOpen, FileText, Presentation, Lightbulb, GraduationCap } from 'lucide-react';
 
 interface GeneratedMaterial {
@@ -23,12 +22,12 @@ interface GeneratedMaterial {
 
 const Generator = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { mutate: generateMaterial, isPending: isGenerating } = useGenerateMaterial();
   const [formData, setFormData] = useState({
     subject: '',
     difficulty: '',
     materialType: '',
+    gradeLevel: '',
     additionalInfo: ''
   });
   const [generatedMaterial, setGeneratedMaterial] = useState<GeneratedMaterial | null>(null);
@@ -36,56 +35,29 @@ const Generator = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user && formData.materialType) {
-      toast({
-        title: "Autentificare necesară",
-        description: "Pentru a genera materiale, trebuie să te autentifici.",
-        variant: "destructive",
-      });
+    if (!formData.materialType || !formData.subject || !formData.difficulty) {
       return;
     }
 
-    if (user && user.materialsCount >= user.materialsLimit && user.subscription === 'gratuit') {
-      toast({
-        title: "Limită atinsă",
-        description: "Ai atins limita de materiale gratuite. Upgrade la Premium pentru materiale nelimitate.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-
-    // Simulare generare AI - în aplicația reală va fi înlocuită cu API-uri AI reale
-    try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockContent = generateMockContent(formData.materialType, formData.subject, formData.difficulty);
-      
-      const newMaterial: GeneratedMaterial = {
-        type: formData.materialType,
-        subject: formData.subject,
-        difficulty: formData.difficulty,
-        content: mockContent,
-        createdAt: new Date().toISOString()
-      };
-
-      setGeneratedMaterial(newMaterial);
-      
-      toast({
-        title: "Material generat cu succes! 🎉",
-        description: `${getTypeLabel(formData.materialType)} pentru ${formData.subject} a fost creat.`,
-      });
-
-    } catch (error) {
-      toast({
-        title: "Eroare",
-        description: "Nu am putut genera materialul. Încearcă din nou.",
-        variant: "destructive",
-      });
-    }
-    
-    setIsGenerating(false);
+    generateMaterial({
+      materialType: formData.materialType as any,
+      subject: formData.subject,
+      gradeLevel: formData.gradeLevel || 'general',
+      difficulty: formData.difficulty,
+      additionalInfo: formData.additionalInfo
+    }, {
+      onSuccess: (data) => {
+        if (data.data) {
+          setGeneratedMaterial({
+            type: data.data.type,
+            subject: data.data.subject || formData.subject,
+            difficulty: data.data.difficulty || formData.difficulty,
+            content: data.data.content,
+            createdAt: data.data.created_at
+          });
+        }
+      }
+    });
   };
 
   const generateMockContent = (type: string, subject: string, difficulty: string) => {
@@ -110,7 +82,7 @@ const Generator = () => {
           ]
         };
       
-      case 'plan':
+      case 'plan_lectie':
         return {
           title: `Plan de lecție ${subject}`,
           duration: '50 minute',
@@ -141,7 +113,7 @@ const Generator = () => {
           ]
         };
       
-      case 'analogii':
+      case 'analogie':
         return {
           title: `Analogii și exemple pentru ${subject}`,
           analogies: [
@@ -196,9 +168,9 @@ const Generator = () => {
   const getTypeLabel = (type: string) => {
     const labels: { [key: string]: string } = {
       'quiz': 'Quiz',
-      'plan': 'Plan de lecție',
+      'plan_lectie': 'Plan de lecție',
       'prezentare': 'Prezentare',
-      'analogii': 'Analogii și exemple',
+      'analogie': 'Analogii și exemple',
       'evaluare': 'Evaluare finală'
     };
     return labels[type] || type;
@@ -207,9 +179,9 @@ const Generator = () => {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'quiz': return <FileText className="h-5 w-5" />;
-      case 'plan': return <BookOpen className="h-5 w-5" />;
+      case 'plan_lectie': return <BookOpen className="h-5 w-5" />;
       case 'prezentare': return <Presentation className="h-5 w-5" />;
-      case 'analogii': return <Lightbulb className="h-5 w-5" />;
+      case 'analogie': return <Lightbulb className="h-5 w-5" />;
       case 'evaluare': return <GraduationCap className="h-5 w-5" />;
       default: return <FileText className="h-5 w-5" />;
     }
@@ -233,7 +205,7 @@ const Generator = () => {
           <div className="space-y-6">
             <h3 className="text-xl font-bold">{content.title}</h3>
             <div className="space-y-4">
-              {content.questions.slice(0, 3).map((q: any, index: number) => (
+              {content.questions.map((q: any, index: number) => (
                 <Card key={index}>
                   <CardHeader>
                     <CardTitle className="text-base">Întrebarea {index + 1}</CardTitle>
@@ -254,12 +226,11 @@ const Generator = () => {
                   </CardContent>
                 </Card>
               ))}
-              <p className="text-center text-gray-500 italic">... și încă 7 întrebări</p>
             </div>
           </div>
         );
 
-      case 'plan':
+      case 'plan_lectie':
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-bold">{content.title}</h3>
@@ -322,7 +293,7 @@ const Generator = () => {
           </div>
         );
 
-      case 'analogii':
+      case 'analogie':
         return (
           <div className="space-y-6">
             <h3 className="text-xl font-bold">{content.title}</h3>
@@ -339,22 +310,6 @@ const Generator = () => {
                       <p className="text-sm text-yellow-600 mt-2">{analogy.explanation}</p>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Exemple practice</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {content.examples.map((example: string, index: number) => (
-                      <li key={index} className="flex items-start space-x-2">
-                        <span className="text-eduai-blue">💡</span>
-                        <span className="text-sm">{example}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </CardContent>
               </Card>
             </div>
@@ -380,28 +335,6 @@ const Generator = () => {
                   </CardContent>
                 </Card>
               ))}
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Răspunsuri pentru cadrul didactic</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {content.answers.map((answer: any, index: number) => (
-                    <div key={index} className="mb-4 p-4 bg-green-50 rounded-lg">
-                      <h4 className="font-semibold text-green-800">Răspuns Întrebarea {answer.question}</h4>
-                      <p className="text-green-700 mb-2">{answer.answer}</p>
-                      <div className="text-sm text-green-600">
-                        <strong>Puncte cheie:</strong>
-                        <ul className="list-disc list-inside ml-2">
-                          {answer.keyPoints.map((point: string, pIndex: number) => (
-                            <li key={pIndex}>{point}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
             </div>
           </div>
         );
@@ -424,6 +357,18 @@ const Generator = () => {
             <p className="text-gray-600">
               Generează automat quiz-uri, planuri de lecții, prezentări și materiale educaționale personalizate cu AI
             </p>
+            {!user && (
+              <div className="mt-4 p-4 bg-green-50 border-l-4 border-green-400 rounded-r-lg">
+                <div className="flex">
+                  <div className="ml-3">
+                    <p className="text-sm text-green-700">
+                      <strong>🎯 Testează acum fără cont!</strong> Poți genera materiale demo pentru a testa funcționalitatea. 
+                      Pentru materiale complete generate cu AI și salvare, creează un cont gratuit.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -446,6 +391,17 @@ const Generator = () => {
                         onChange={(e) => handleInputChange('subject', e.target.value)}
                         placeholder="ex. Matematică clasa a 8-a, Istorie BAC"
                         required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="gradeLevel">Clasa / Nivel</Label>
+                      <Input
+                        id="gradeLevel"
+                        value={formData.gradeLevel}
+                        onChange={(e) => handleInputChange('gradeLevel', e.target.value)}
+                        placeholder="ex. Clasa a 8-a, Liceu, BAC"
                         className="mt-1"
                       />
                     </div>
@@ -477,7 +433,7 @@ const Generator = () => {
                               <span>Quiz (10 întrebări)</span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="plan">
+                          <SelectItem value="plan_lectie">
                             <div className="flex items-center space-x-2">
                               <BookOpen className="h-4 w-4" />
                               <span>Plan de lecție</span>
@@ -489,7 +445,7 @@ const Generator = () => {
                               <span>Prezentare</span>
                             </div>
                           </SelectItem>
-                          <SelectItem value="analogii">
+                          <SelectItem value="analogie">
                             <div className="flex items-center space-x-2">
                               <Lightbulb className="h-4 w-4" />
                               <span>Analogii și exemple</span>
@@ -530,7 +486,9 @@ const Generator = () => {
                       ) : (
                         <>
                           {formData.materialType && getTypeIcon(formData.materialType)}
-                          <span className="ml-2">Generează material</span>
+                          <span className="ml-2">
+                            {user ? 'Generează material' : 'Generează material demo'}
+                          </span>
                         </>
                       )}
                     </Button>
@@ -549,10 +507,10 @@ const Generator = () => {
                     {!user && (
                       <div className="p-3 bg-blue-50 rounded-lg text-center">
                         <p className="text-sm text-blue-800">
-                          <strong>Demonstrație:</strong> Poți genera un material demo fără cont.
+                          <strong>🎯 Testare gratuită:</strong> Poți genera materiale demo fără cont pentru a testa funcționalitatea.
                         </p>
                         <p className="text-xs text-blue-600 mt-1">
-                          Pentru a salva și accesa toate funcțiile, creează un cont gratuit.
+                          Pentru materiale complete cu AI și salvare, creează un cont gratuit.
                         </p>
                       </div>
                     )}
@@ -570,6 +528,7 @@ const Generator = () => {
                       <div className="flex items-center space-x-2">
                         {getTypeIcon(generatedMaterial.type)}
                         <CardTitle>Material generat</CardTitle>
+                        {!user && <Badge variant="outline">Demo</Badge>}
                       </div>
                       <div className="flex space-x-2">
                         {user && (
@@ -593,10 +552,30 @@ const Generator = () => {
                     <CardDescription>
                       {getTypeLabel(generatedMaterial.type)} pentru {generatedMaterial.subject} 
                       • Nivel {generatedMaterial.difficulty}
+                      {!user && ' • Versiune demo'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {renderGeneratedContent()}
+                    
+                    {!user && (
+                      <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                        <div className="text-center">
+                          <h4 className="font-semibold text-blue-900 mb-2">🚀 Vrei materiale complete generate cu AI?</h4>
+                          <p className="text-sm text-blue-700 mb-3">
+                            Creează un cont gratuit pentru materiale complete, salvare automată și funcții avansate!
+                          </p>
+                          <div className="flex gap-2 justify-center">
+                            <Button size="sm" className="bg-eduai-blue hover:bg-eduai-blue/90">
+                              <a href="/register">Creează cont gratuit</a>
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <a href="/login">Am deja cont</a>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ) : (
@@ -604,10 +583,13 @@ const Generator = () => {
                   <CardContent className="text-center">
                     <div className="text-6xl mb-4">🤖</div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      Gata să generez materiale educaționale!
+                      {user ? 'Gata să generez materiale educaționale!' : 'Testează generarea de materiale!'}
                     </h3>
                     <p className="text-gray-600">
-                      Completează formularul din stânga și voi crea materialul perfect pentru nevoile tale educaționale.
+                      {user 
+                        ? 'Completează formularul din stânga și voi crea materialul perfect pentru nevoile tale educaționale.'
+                        : 'Completează formularul din stânga pentru a testa generarea de materiale demo fără să ai nevoie de cont!'
+                      }
                     </p>
                   </CardContent>
                 </Card>
