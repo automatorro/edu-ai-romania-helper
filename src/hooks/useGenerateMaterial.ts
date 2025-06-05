@@ -92,9 +92,11 @@ export const useGenerateMaterial = () => {
         throw new Error(response.data?.error || 'Eroare necunoscută la generarea materialului');
       }
 
-      // Convert to Office format if material was saved
-      if (response.data.material) {
+      // Convert to Office format if material was saved and has content
+      if (response.data.material && response.data.material.content) {
         try {
+          console.log('🔄 Starting conversion to Office format...');
+          
           const convertResponse = await supabase.functions.invoke('convert-to-office', {
             body: {
               content: response.data.material.content.generated_content,
@@ -106,14 +108,26 @@ export const useGenerateMaterial = () => {
             },
           });
 
+          console.log('Convert response:', convertResponse);
+
+          if (convertResponse.error) {
+            console.error('Conversion error:', convertResponse.error);
+            throw new Error(`Eroare la conversia fișierului: ${convertResponse.error.message}`);
+          }
+
           if (convertResponse.data?.success) {
-            console.log('Fișierul a fost convertit și salvat cu succes');
+            console.log('✅ Fișierul a fost convertit și salvat cu succes');
+            
+            // Update the response to include download info
+            response.data.material.download_url = convertResponse.data.downloadUrl;
+            response.data.material.file_name = convertResponse.data.fileName;
           } else {
-            console.warn('Conversia în format Office a eșuat:', convertResponse.data?.error);
+            console.warn('❌ Conversia în format Office a eșuat:', convertResponse.data?.error);
+            throw new Error(convertResponse.data?.error || 'Eroare la conversia fișierului');
           }
         } catch (conversionError) {
-          console.warn('Eroare la conversia în format Office:', conversionError);
-          // Nu oprim procesul pentru că materialul JSON a fost salvat cu succes
+          console.error('❌ Eroare la conversia în format Office:', conversionError);
+          throw conversionError; // Re-throw pentru că vrem să știe utilizatorul
         }
       }
 
@@ -121,9 +135,9 @@ export const useGenerateMaterial = () => {
     },
     onSuccess: (data) => {
       const message = data.message || (user?.role === 'admin' 
-        ? "Material generat cu succes! (Admin - generări nelimitate)" 
+        ? "Material generat și convertit cu succes! (Admin - generări nelimitate)" 
         : user 
-          ? "Material generat cu succes!"
+          ? "Material generat și convertit cu succes!"
           : "Material generat cu succes! (Mod testare - funcționalitate completă)");
       
       toast({
