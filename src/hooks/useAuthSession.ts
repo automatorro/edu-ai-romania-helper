@@ -30,7 +30,9 @@ export const useAuthSession = () => {
         if (session?.user) {
           console.log('Processing initial session user...');
           const convertedUser = await convertSupabaseUser(session.user);
-          setUser(convertedUser);
+          if (convertedUser) {
+            setUser(convertedUser);
+          }
         }
         setIsLoading(false);
       } catch (error) {
@@ -49,12 +51,10 @@ export const useAuthSession = () => {
       
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('User signed in, processing...');
-        setIsLoading(true);
         try {
           const convertedUser = await convertSupabaseUser(session.user);
-          setUser(convertedUser);
-          
           if (convertedUser) {
+            setUser(convertedUser);
             toast({
               title: "Autentificare reușită!",
               description: "Bine ai venit în EduAI!",
@@ -62,20 +62,19 @@ export const useAuthSession = () => {
           }
         } catch (error) {
           console.error('Error processing signed in user:', error);
-        } finally {
-          setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out');
         setUser(null);
-        setIsLoading(false);
-      } else if (event === 'TOKEN_REFRESHED') {
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         console.log('Token refreshed, updating user data...');
-        if (session?.user) {
-          const convertedUser = await convertSupabaseUser(session.user);
+        const convertedUser = await convertSupabaseUser(session.user);
+        if (convertedUser) {
           setUser(convertedUser);
         }
       }
+      
+      setIsLoading(false);
     });
 
     return () => {

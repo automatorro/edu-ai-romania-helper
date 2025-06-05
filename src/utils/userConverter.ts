@@ -10,99 +10,57 @@ export const convertSupabaseUser = async (supabaseUser: SupabaseUser): Promise<U
     console.log('Converting Supabase user:', supabaseUser.email);
     console.log('User metadata:', supabaseUser.user_metadata);
     
+    // Wait a moment to ensure trigger has processed
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Fetch the user's profile from the profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', supabaseUser.id)
-      .single();
+      .maybeSingle();
 
     console.log('Profile query result:', { profile, profileError });
 
-    if (profileError) {
-      console.error('Error fetching profile:', profileError);
-      
-      // If profile doesn't exist, this might be a new user whose trigger hasn't fired yet
-      // Return a minimal user object and let the trigger create the profile
-      if (profileError.code === 'PGRST116') {
-        console.log('Profile not found for user, might be creating...');
-        
-        // Wait a bit and try again once in case the trigger is still processing
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const { data: retryProfile, error: retryError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', supabaseUser.id)
-          .single();
-        
-        if (retryProfile) {
-          console.log('Profile found on retry:', retryProfile);
-          
-          // Fetch user role
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', supabaseUser.id)
-            .single();
-
-          const userRole = roleData?.role || 'user';
-
-          return {
-            id: supabaseUser.id,
-            email: supabaseUser.email || '',
-            name: retryProfile.name || supabaseUser.email?.split('@')[0] || 'Utilizator',
-            userType: retryProfile.user_type,
-            subscription: retryProfile.subscription,
-            materialsCount: retryProfile.materials_count,
-            materialsLimit: retryProfile.materials_limit,
-            avatar: retryProfile.avatar_url || supabaseUser.user_metadata?.avatar_url,
-            provider: retryProfile.provider || supabaseUser.app_metadata?.provider || 'email',
-            role: userRole
-          };
-        }
-        
-        // Still no profile, return minimal user
-        return {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.full_name || 
-                supabaseUser.user_metadata?.name || 
-                supabaseUser.email?.split('@')[0] || 'Utilizator',
-          userType: 'profesor',
-          subscription: 'gratuit',
-          materialsCount: 0,
-          materialsLimit: 5,
-          avatar: supabaseUser.user_metadata?.avatar_url,
-          provider: supabaseUser.app_metadata?.provider || 'email',
-          role: 'user'
-        };
-      }
-      return null;
-    }
-
-    // Fetch user role from user_roles table
+    // Fetch user role
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', supabaseUser.id)
-      .single();
+      .maybeSingle();
 
     const userRole = roleData?.role || 'user';
 
-    console.log('Profile found:', profile);
-    console.log('User role:', userRole);
+    if (profile) {
+      console.log('Profile found:', profile);
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: profile.name || supabaseUser.email?.split('@')[0] || 'Utilizator',
+        userType: profile.user_type || 'profesor',
+        subscription: profile.subscription || 'gratuit',
+        materialsCount: profile.materials_count || 0,
+        materialsLimit: profile.materials_limit || 5,
+        avatar: profile.avatar_url || supabaseUser.user_metadata?.avatar_url,
+        provider: profile.provider || supabaseUser.app_metadata?.provider || 'email',
+        role: userRole
+      };
+    }
 
+    // If no profile found, return minimal user with defaults
+    console.log('No profile found, returning minimal user');
     return {
       id: supabaseUser.id,
       email: supabaseUser.email || '',
-      name: profile.name || supabaseUser.email?.split('@')[0] || 'Utilizator',
-      userType: profile.user_type,
-      subscription: profile.subscription,
-      materialsCount: profile.materials_count,
-      materialsLimit: profile.materials_limit,
-      avatar: profile.avatar_url || supabaseUser.user_metadata?.avatar_url,
-      provider: profile.provider || supabaseUser.app_metadata?.provider || 'email',
+      name: supabaseUser.user_metadata?.full_name || 
+            supabaseUser.user_metadata?.name || 
+            supabaseUser.email?.split('@')[0] || 'Utilizator',
+      userType: (supabaseUser.user_metadata?.user_type as User['userType']) || 'profesor',
+      subscription: 'gratuit',
+      materialsCount: 0,
+      materialsLimit: 5,
+      avatar: supabaseUser.user_metadata?.avatar_url,
+      provider: supabaseUser.app_metadata?.provider || 'email',
       role: userRole
     };
   } catch (error) {

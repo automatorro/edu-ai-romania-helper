@@ -15,7 +15,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, session, isLoading, setIsLoading } = useAuthSession();
+  const { user, session, isLoading, setUser, setIsLoading } = useAuthSession();
   const authOperations = useAuthOperations();
 
   const login = async (email: string, password: string) => {
@@ -36,18 +36,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const value: AuthContextType = { 
+    user, 
+    session,
+    login, 
+    loginWithGoogle: authOperations.loginWithGoogle,
+    loginWithFacebook: authOperations.loginWithFacebook,
+    loginWithGithub: authOperations.loginWithGithub,
+    register, 
+    logout: authOperations.logout, 
+    isLoading 
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      session,
-      login, 
-      loginWithGoogle: authOperations.loginWithGoogle,
-      loginWithFacebook: authOperations.loginWithFacebook,
-      loginWithGithub: authOperations.loginWithGithub,
-      register, 
-      logout: authOperations.logout, 
-      isLoading 
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

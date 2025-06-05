@@ -5,13 +5,9 @@
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user();
 
--- Check if user_type enum exists, and create it if it doesn't
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type') THEN
-        CREATE TYPE user_type AS ENUM ('profesor', 'elev', 'parinte');
-    END IF;
-END $$;
+-- Drop the enum if it exists and recreate it to ensure it's properly defined
+DROP TYPE IF EXISTS public.user_type CASCADE;
+CREATE TYPE public.user_type AS ENUM ('profesor', 'elev', 'parinte');
 
 -- Create the function to handle new user registration
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -33,8 +29,8 @@ BEGIN
     ),
     CASE 
       WHEN (NEW.raw_user_meta_data ->> 'user_type') IN ('profesor', 'elev', 'parinte') 
-      THEN (NEW.raw_user_meta_data ->> 'user_type')::user_type
-      ELSE 'profesor'::user_type
+      THEN (NEW.raw_user_meta_data ->> 'user_type')::public.user_type
+      ELSE 'profesor'::public.user_type
     END,
     COALESCE(NEW.raw_app_meta_data ->> 'provider', 'email'),
     NEW.raw_user_meta_data ->> 'avatar_url'
