@@ -1,10 +1,12 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useEmailConfirmation } from '@/hooks/useEmailConfirmation';
 import type { AuthError, User } from '@/types/auth';
 
 export const useAuthOperations = () => {
   const { toast } = useToast();
+  const { sendConfirmationEmail } = useEmailConfirmation();
 
   const login = async (email: string, password: string) => {
     try {
@@ -115,7 +117,7 @@ export const useAuthOperations = () => {
             user_type: userType,
             name: name
           },
-          emailRedirectTo: window.location.origin + '/dashboard'
+          emailRedirectTo: `${window.location.origin}/confirm-email`
         }
       });
 
@@ -127,9 +129,12 @@ export const useAuthOperations = () => {
       }
 
       if (data.user && !data.user.email_confirmed_at) {
+        // Send custom confirmation email
+        await sendConfirmationEmail(email, name);
+        
         toast({
-          title: "Verifică email-ul!",
-          description: "Am trimis un link de confirmare la adresa ta de email.",
+          title: "Cont creat cu succes!",
+          description: "Verifică email-ul pentru a-ți confirma contul.",
         });
       } else {
         toast({
@@ -183,9 +188,76 @@ export const useAuthOperations = () => {
 
   return {
     login,
-    loginWithGoogle,
-    loginWithFacebook,
-    loginWithGithub,
+    loginWithGoogle: async () => {
+      try {
+        console.log('Starting Google OAuth...');
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin + '/dashboard',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            }
+          }
+        });
+
+        if (error) throw error;
+        console.log('Google OAuth initiated successfully');
+      } catch (error) {
+        const authError = error as AuthError;
+        console.error('Google login error:', authError);
+        toast({
+          title: "Eroare",
+          description: authError.message || "Nu am putut conecta cu Google.",
+          variant: "destructive",
+        });
+      }
+    },
+    loginWithFacebook: async () => {
+      try {
+        console.log('Starting Facebook OAuth...');
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'facebook',
+          options: {
+            redirectTo: window.location.origin + '/dashboard'
+          }
+        });
+
+        if (error) throw error;
+        console.log('Facebook OAuth initiated successfully');
+      } catch (error) {
+        const authError = error as AuthError;
+        console.error('Facebook login error:', authError);
+        toast({
+          title: "Eroare",
+          description: authError.message || "Nu am putut conecta cu Facebook.",
+          variant: "destructive",
+        });
+      }
+    },
+    loginWithGithub: async () => {
+      try {
+        console.log('Starting GitHub OAuth...');
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'github',
+          options: {
+            redirectTo: window.location.origin + '/dashboard'
+          }
+        });
+
+        if (error) throw error;
+        console.log('GitHub OAuth initiated successfully');
+      } catch (error) {
+        const authError = error as AuthError;
+        console.error('GitHub login error:', authError);
+        toast({
+          title: "Eroare",
+          description: authError.message || "Nu am putut conecta cu GitHub.",
+          variant: "destructive",
+        });
+      }
+    },
     register,
     logout
   };
