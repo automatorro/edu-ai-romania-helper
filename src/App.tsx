@@ -17,10 +17,29 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+import { useEffect } from "react";
+import { supabase } from "./integrations/supabase/client";
+
+const OAuthRedirectHandler = () => {
+  useEffect(() => {
+    const handleRedirect = async () => {
+      const { data, error } = await supabase.auth.getSessionFromUrl();
+      if (error) {
+        console.error("Error handling OAuth redirect:", error);
+      } else if (data?.session) {
+        console.log("OAuth redirect session restored:", data.session.user?.email);
+      }
+    };
+    handleRedirect();
+  }, []);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
+        <OAuthRedirectHandler />
         <Toaster />
         <Sonner />
         <BrowserRouter>
